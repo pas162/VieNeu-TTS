@@ -30,8 +30,25 @@ SAMPLE_RATE = 48_000
 MAX_REFERENCE_BYTES = 25 * 1024 * 1024
 MIN_REFERENCE_SECONDS = 1.0
 MAX_REFERENCE_SECONDS = 15.0
-MODEL_NAME = "VieNeu-TTS-v3-Turbo"
-MODEL_VARIANT = "int8 · CPU/ONNX"
+DEFAULT_MODEL_ID = "v3-turbo-int8"
+MODEL_CONFIGS: dict[str, dict[str, Any]] = {
+    "v3-turbo-int8": {
+        "id": "v3-turbo-int8",
+        "name": "VieNeu-TTS v3 Turbo INT8",
+        "variant": "INT8 · CPU/ONNX",
+        "description": "Nhẹ nhất, nhanh trên CPU và phù hợp cho hầu hết máy.",
+        "recommended": True,
+        "load_kwargs": {"backend": "onnx", "precision": "int8"},
+    },
+    "v3-turbo-fp32": {
+        "id": "v3-turbo-fp32",
+        "name": "VieNeu-TTS v3 Turbo FP32",
+        "variant": "FP32 · CPU/ONNX",
+        "description": "Chất lượng tối đa, dùng nhiều bộ nhớ và xử lý chậm hơn INT8.",
+        "recommended": False,
+        "load_kwargs": {"backend": "onnx", "precision": "fp32"},
+    },
+}
 ROOT_DIR = Path(__file__).resolve().parents[1]
 CLIENT_HTML_PATH = ROOT_DIR / "client" / "client.html"
 VOICES_PATH = ROOT_DIR / "src" / "vieneu" / "assets" / "voices_v3_turbo.json"
@@ -47,39 +64,44 @@ _model: Any | None = None
 _model_state: ModelState = "idle"
 _model_error: str | None = None
 _model_loaded_at: float | None = None
+_selected_model_id = DEFAULT_MODEL_ID
 _model_lock = threading.RLock()
 
 
 def _status_payload() -> dict[str, Any]:
     """Return a serializable snapshot without importing the TTS runtime."""
     with _model_lock:
+        config = MODEL_CONFIGS[_selected_model_id]
         return {
             "state": _model_state,
             "ready": _model_state == "ready" and _model is not None,
-            "model": MODEL_NAME,
-            "variant": MODEL_VARIANT,
+            "model_id": _selected_model_id,
+            "model": config["name"],
+            "variant": config["variant"],
+            "description": config["description"],
             "sample_rate": SAMPLE_RATE,
             "error": _model_error,
             "loaded_at": _model_loaded_at,
         }
 
 
-def _load_model() -> None:
+def _load_model(model_id: str) -> None:
     """Import and initialize VieNeu only after an explicit user action."""
     global _model, _model_state, _model_error, _model_loaded_at
 
     try:
-        print("[VieNeu] Dang tai VieNeu-TTS v3 Turbo (int8, CPU)...")
+        config = MODEL_CONFIGS[model_id]
+        print(f"[VieNeu] Dang tai {config['name']}...")
         from vieneu import Vieneu  # Deliberately lazy: may download model files.
 
-        engine = Vieneu(backend="onnx", precision="int8")
+        engine = Vieneu(**config["load_kwargs"])
         with _model_lock:
             _model = engine
             _model_state = "ready"
             _model_error = None
             _model_loaded_at = time.time()
         threads = getattr(getattr(engine, "engine", None), "ort_intra_op_threads", "?")
-        print(f"[VieNeu] Model san sang. Backbone: int8 | ONNX threads: {threads}")
+        print(f"[VieNeu] Model san sang. {config['variant']} | ONNX threads: {threads}")
     except Exception as exc:  # noqa: BLE001 - surface runtime/download errors in UI
         with _model_lock:
             _model = None
@@ -89,17 +111,22 @@ def _load_model() -> None:
         print(f"[VieNeu] Khong the tai model: {exc}")
 
 
-def _start_model_load(background_tasks: BackgroundTasks) -> dict[str, Any]:
-    global _model_state, _model_error
+def _start_model_load(background_tasks: BackgroundTasks, model_id: str) -> dict[str, Any]:
+    global _model, _model_state, _model_error, _model_loaded_at, _selected_model_id
 
+    if model_id not in MODEL_CONFIGS:
+        raise HTTPException(status_code=422, detail="Model không được hỗ trợ.")
     with _model_lock:
-        if _model_state == "ready" and _model is not None:
+        if _model_state == "ready" and _model is not None and _selected_model_id == model_id:
             return _status_payload()
         if _model_state == "loading":
             return _status_payload()
+        _model = None
         _model_state = "loading"
         _model_error = None
-        background_tasks.add_task(_load_model)
+        _model_loaded_at = None
+        _selected_model_id = model_id
+        background_tasks.add_task(_load_model, model_id)
     return _status_payload()
 
 
@@ -155,9 +182,25 @@ async def model_status() -> dict[str, Any]:
     return _status_payload()
 
 
+@app.get("/api/models")
+async def api_models() -> list[dict[str, Any]]:
+    """Return the local catalog; listing models never initializes them."""
+    return [
+        {key: value for key, value in config.items() if key != "load_kwargs"}
+        for config in MODEL_CONFIGS.values()
+    ]
+
+
+class ModelLoadRequest(BaseModel):
+    model_id: str = DEFAULT_MODEL_ID
+
+
 @app.post("/api/model/load", status_code=202)
-async def model_load(background_tasks: BackgroundTasks) -> dict[str, Any]:
-    return _start_model_load(background_tasks)
+async def model_load(
+    background_tasks: BackgroundTasks,
+    request: ModelLoadRequest | None = None,
+) -> dict[str, Any]:
+    return _start_model_load(background_tasks, (request or ModelLoadRequest()).model_id)
 
 
 @app.post("/api/model/unload")

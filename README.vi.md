@@ -168,6 +168,8 @@ for chunk in vieneu.infer_stream("Xin chào các bạn!", voice="Trúc Ly"):
 
 Giao diện **VieNeu Studio dùng FastAPI** thân thiện nằm ở [`apps/web_stream.py`](apps/web_stream.py). Frontend mở ngay và **không import hay tải model khi khởi động**. Danh sách giọng được đọc từ metadata có sẵn; model chỉ được tải/khởi tạo sau khi bạn chủ động bấm **Khởi động model** trên giao diện.
 
+Trước khi tải, bạn có thể chọn **v3 Turbo INT8** (khuyến nghị, nhẹ/nhanh hơn trên CPU) hoặc **v3 Turbo FP32** (chất lượng tối đa nhưng tốn RAM và chậm hơn). Chỉ đổi lựa chọn sẽ không tải dữ liệu.
+
 Tab **Clone giọng** cho phép tải WAV/FLAC/OGG/MP3 hoặc ghi WAV trực tiếp trên trình duyệt. Nên dùng mẫu sạch, chỉ một người nói và dài 3–5 giây. Audio mẫu chỉ nằm trong file tạm và được xóa ngay sau khi streaming kết thúc.
 
 ```bash

@@ -61,6 +61,10 @@ def test_public_frontend_api_works_before_model_load(monkeypatch):
     status = client.get("/api/status").json()
     assert status["state"] == "idle"
     assert status["ready"] is False
+    models = client.get("/api/models").json()
+    assert [model["id"] for model in models] == ["v3-turbo-int8", "v3-turbo-fp32"]
+    assert models[0]["recommended"] is True
+    assert client.post("/api/model/load", json={"model_id": "unknown"}).status_code == 422
     assert len(client.get("/api/voices").json()) == 14
     assert client.post("/stream", json={"text": "Xin chào"}).status_code == 409
     assert client.post("/stream", json={"text": "   "}).status_code == 422
@@ -115,10 +119,23 @@ def test_model_is_loaded_only_when_loader_runs(monkeypatch):
         calls.append(kwargs)
         return types.SimpleNamespace(engine=FakeEngine())
 
+    class ImmediateTasks:
+        @staticmethod
+        def add_task(function, *args):
+            function(*args)
+
     monkeypatch.setitem(sys.modules, "vieneu", types.SimpleNamespace(Vieneu=fake_vieneu))
     monkeypatch.setattr(web_stream, "_model", None)
-    monkeypatch.setattr(web_stream, "_model_state", "loading")
-    web_stream._load_model()
+    monkeypatch.setattr(web_stream, "_model_state", "idle")
+    monkeypatch.setattr(web_stream, "_selected_model_id", web_stream.DEFAULT_MODEL_ID)
 
-    assert calls == [{"backend": "onnx", "precision": "int8"}]
-    assert web_stream._status_payload()["ready"] is True
+    int8_status = web_stream._start_model_load(ImmediateTasks(), "v3-turbo-int8")
+    assert int8_status["ready"] is True
+    fp32_status = web_stream._start_model_load(ImmediateTasks(), "v3-turbo-fp32")
+
+    assert calls == [
+        {"backend": "onnx", "precision": "int8"},
+        {"backend": "onnx", "precision": "fp32"},
+    ]
+    assert fp32_status["model_id"] == "v3-turbo-fp32"
+    assert fp32_status["ready"] is True
