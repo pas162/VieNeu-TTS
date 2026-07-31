@@ -115,24 +115,31 @@
     .hero p { max-width: 610px; margin: 18px auto 0; color: var(--muted); font-size: clamp(15px, 2vw, 18px); }
 
     .model-strip {
-      display: flex; align-items: center; gap: 14px; margin-bottom: 18px; padding: 14px 16px;
-      border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--surface) 90%, transparent);
-      box-shadow: var(--shadow-soft);
+      display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; grid-template-rows: auto auto;
+      align-items: center; gap: 13px 14px; margin-bottom: 18px; padding: 16px;
+      border: 1px solid color-mix(in srgb, var(--forest) 12%, var(--line)); border-radius: var(--radius-md);
+      background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: var(--shadow-soft);
     }
-    .status-icon { width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 12px; background: var(--amber-soft); color: var(--amber); }
-    .status-icon svg { width: 19px; height: 19px; }
-    .model-copy { min-width: 0; flex: 1; }
-    .model-copy strong { display: block; font-size: 14px; }
-    .model-copy span { display: block; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .model-picker { width: min(260px, 25vw); flex: 0 1 260px; }
-    .model-picker label { display: block; margin: 0 0 4px 2px; color: var(--quiet); font-size: 9.5px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
-    .model-picker select { height: 39px; padding-left: 11px; font-size: 12px; font-weight: 650; }
-    .status-chip { display: inline-flex; align-items: center; gap: 7px; margin-left: auto; padding: 7px 10px; border-radius: 999px; background: var(--amber-soft); color: var(--amber); font-size: 12px; font-weight: 740; white-space: nowrap; }
+    .status-icon { grid-column: 1; grid-row: 1; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; background: var(--forest-soft); color: var(--forest); }
+    .status-icon svg { width: 20px; height: 20px; }
+    .model-copy { grid-column: 2; grid-row: 1; min-width: 0; }
+    .model-copy strong { display: block; font-size: 14px; letter-spacing: -.015em; }
+    .model-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .model-picker { grid-column: 1 / 3; grid-row: 2; min-width: 0; }
+    .model-picker label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .model-picker select { height: 46px; padding-left: 13px; border-color: color-mix(in srgb, var(--forest) 16%, var(--line)); background-color: var(--surface-raised); font-size: 12.5px; font-weight: 630; }
+    .status-chip { grid-column: 3; grid-row: 1; display: inline-flex; align-items: center; gap: 7px; justify-self: end; padding: 7px 10px; border-radius: 999px; background: var(--amber-soft); color: var(--amber); font-size: 11.5px; font-weight: 740; white-space: nowrap; }
     .status-chip .pulse { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
     .status-chip.loading .pulse { animation: pulse 1.15s ease-in-out infinite; }
     .status-chip.ready { background: var(--forest-soft); color: var(--forest); }
     .status-chip.error { background: var(--danger-soft); color: var(--danger); }
-    .model-action { min-width: 145px; }
+    .model-action { grid-column: 3; grid-row: 2; min-width: 166px; }
+    .model-load-btn { width: 100%; min-height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 16px; border: 1px solid var(--forest); border-radius: 12px; background: var(--forest); color: #fff; cursor: pointer; font-size: 13px; font-weight: 720; box-shadow: 0 6px 16px color-mix(in srgb, var(--forest) 20%, transparent); transition: .17s ease; }
+    .model-load-btn:hover:not(:disabled) { background: var(--forest-strong); border-color: var(--forest-strong); transform: translateY(-1px); }
+    .model-load-btn:disabled { opacity: .55; cursor: not-allowed; box-shadow: none; }
+    .model-load-btn svg { width: 17px; height: 17px; }
+    .model-load-btn[data-action="unload"] { border-color: var(--line-strong); background: var(--surface-raised); color: var(--muted); box-shadow: none; }
+    .model-load-btn[data-action="unload"]:hover:not(:disabled) { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
 
     .workspace { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(290px, .8fr); gap: 18px; align-items: start; }
     .panel { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); }
@@ -258,11 +265,14 @@
       .workspace { grid-template-columns: 1fr; }
       .side { position: static; order: -1; }
       .hero { padding-top: 22px; }
-      .model-strip { flex-wrap: wrap; }
-      .model-action { width: 100%; }
-      .model-action .secondary-btn { width: 100%; }
-      .model-picker { width: 100%; flex-basis: calc(100% - 60px); }
-      .status-chip { margin-left: 0; }
+    }
+    @media (max-width: 580px) {
+      .model-strip { grid-template-columns: 42px minmax(0, 1fr); gap: 11px 12px; }
+      .status-icon { grid-column: 1; grid-row: 1 / 3; align-self: start; }
+      .model-copy { grid-column: 2; grid-row: 1; }
+      .status-chip { grid-column: 2; grid-row: 2; justify-self: start; }
+      .model-picker { grid-column: 1 / -1; grid-row: 3; }
+      .model-action { grid-column: 1 / -1; grid-row: 4; width: 100%; }
     }
     @media (max-width: 520px) {
       .shell { width: min(100% - 16px, 500px); }
@@ -312,11 +322,11 @@
 
       <section class="model-strip" id="modelStrip" aria-live="polite">
         <div class="status-icon" id="statusIcon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="5" width="14" height="14" rx="3"/><path d="M9 9h6v6H9zM9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>
         </div>
         <div class="model-copy">
-          <strong id="modelTitle">Model đang nghỉ</strong>
-          <span id="modelDescription">Giao diện đã sẵn sàng; chưa có model nào được tải xuống.</span>
+          <strong id="modelTitle">Chọn model để bắt đầu</strong>
+          <span id="modelDescription">Lựa chọn model không tự động tải dữ liệu.</span>
         </div>
         <div class="model-picker">
           <label for="modelSelect">Model cần tải</label>
@@ -324,9 +334,9 @@
         </div>
         <span class="status-chip" id="statusChip"><i class="pulse"></i><span>Chưa khởi động</span></span>
         <div class="model-action">
-          <button class="secondary-btn" id="loadBtn" type="button">
+          <button class="model-load-btn" id="loadBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
-            <span>Khởi động model</span>
+            <span>Tải &amp; khởi động</span>
           </button>
         </div>
       </section>
@@ -530,19 +540,19 @@
       const isLoadedSelection = modelState === 'ready' && loadedModelId === selected.id;
 
       if (isLoadedSelection) {
-        elements.modelTitle.textContent = 'Model đã sẵn sàng';
-        elements.modelDescription.textContent = `${selected.name} · ${selected.variant} · 48 kHz`;
+        elements.modelTitle.textContent = selected.name;
+        elements.modelDescription.textContent = `${selected.variant} · 48 kHz · sẵn sàng tạo và clone giọng`;
         elements.statusChip.className = 'status-chip ready';
         chipText.textContent = 'Sẵn sàng';
         buttonText.textContent = 'Giải phóng model';
         elements.load.dataset.action = 'unload';
       } else {
         const running = modelCatalog.find((model) => model.id === loadedModelId);
-        elements.modelTitle.textContent = selected.name;
-        elements.modelDescription.textContent = running ? `${selected.variant} · Chưa tải (đang chạy ${running.name})` : `${selected.variant} · ${selected.description}`;
+        elements.modelTitle.textContent = running ? 'Bạn đã chọn một model khác' : 'Chọn model để bắt đầu';
+        elements.modelDescription.textContent = running ? `${selected.name} chưa được tải · hiện đang chạy ${running.name}` : `${selected.name} · ${selected.description}`;
         elements.statusChip.className = 'status-chip';
         chipText.textContent = running ? 'Chưa tải lựa chọn' : 'Chưa khởi động';
-        buttonText.textContent = running ? 'Tải model này' : 'Khởi động model';
+        buttonText.textContent = running ? 'Tải model này' : 'Tải & khởi động';
         elements.load.dataset.action = 'load';
       }
       elements.load.disabled = false;
@@ -563,14 +573,14 @@
       elements.generate.disabled = modelState !== 'ready';
 
       if (modelState === 'ready') {
-        elements.modelTitle.textContent = 'Model đã sẵn sàng';
-        elements.modelDescription.textContent = `${status.model} · ${status.variant} · ${(status.sample_rate / 1000)} kHz`;
+        elements.modelTitle.textContent = status.model;
+        elements.modelDescription.textContent = `${status.variant} · ${(status.sample_rate / 1000)} kHz · sẵn sàng tạo và clone giọng`;
         chipText.textContent = 'Sẵn sàng';
         buttonText.textContent = 'Giải phóng model';
         elements.load.dataset.action = 'unload';
       } else if (modelState === 'loading') {
-        elements.modelTitle.textContent = 'Đang chuẩn bị model…';
-        elements.modelDescription.textContent = 'Lần đầu có thể cần tải dữ liệu. Bạn vẫn có thể soạn nội dung trong lúc chờ.';
+        elements.modelTitle.textContent = `Đang tải ${status.model}…`;
+        elements.modelDescription.textContent = 'Lần đầu có thể mất vài phút; bạn vẫn có thể soạn nội dung trong lúc chờ.';
         chipText.textContent = 'Đang tải';
         buttonText.textContent = 'Đang khởi động…';
         elements.load.disabled = true;
@@ -582,10 +592,10 @@
         buttonText.textContent = 'Thử lại';
         elements.load.dataset.action = 'load';
       } else {
-        elements.modelTitle.textContent = status.model || 'Model đang nghỉ';
-        elements.modelDescription.textContent = status.description || 'Giao diện đã sẵn sàng; chưa có model nào được tải xuống.';
+        elements.modelTitle.textContent = 'Chọn model để bắt đầu';
+        elements.modelDescription.textContent = `${status.model} · ${status.description}`;
         chipText.textContent = 'Chưa khởi động';
-        buttonText.textContent = 'Khởi động model';
+        buttonText.textContent = 'Tải & khởi động';
         elements.load.dataset.action = 'load';
       }
     }
