@@ -189,6 +189,8 @@ for chunk in vieneu.infer_stream("Xin chào các bạn!", voice="Minh Đức"):
 
 A friendly **FastAPI streaming studio** is available in [`apps/web_stream.py`](apps/web_stream.py). The frontend starts instantly and **does not import or download a model at startup**. Voice metadata is bundled locally; the model is downloaded/initialized only after you explicitly click **Start model** in the UI.
 
+The **Voice cloning** tab accepts a WAV/FLAC/OGG/MP3 sample or records a WAV directly in the browser. A clean, single-speaker clip of 3–5 seconds works best. Samples are stored only in a temporary file and deleted immediately after streaming finishes.
+
 ```bash
 uv run vieneu-frontend                            # → http://127.0.0.1:8001
 # or: make frontend

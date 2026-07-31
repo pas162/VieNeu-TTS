@@ -1,11 +1,23 @@
 """Tests for the lazy-loading VieNeu Studio frontend."""
 
+import io
 import subprocess
 import sys
 import types
+import wave
 from pathlib import Path
 
 import numpy as np
+
+
+def _wav_bytes(seconds: float, sample_rate: int = 16_000) -> bytes:
+    output = io.BytesIO()
+    with wave.open(output, "wb") as audio:
+        audio.setnchannels(1)
+        audio.setsampwidth(2)
+        audio.setframerate(sample_rate)
+        audio.writeframes(b"\x00\x00" * int(seconds * sample_rate))
+    return output.getvalue()
 
 
 def test_import_does_not_import_vieneu_or_start_model():
@@ -53,11 +65,12 @@ def test_public_frontend_api_works_before_model_load(monkeypatch):
     assert client.post("/stream", json={"text": "Xin chào"}).status_code == 409
     assert client.post("/stream", json={"text": "   "}).status_code == 422
 
+    stream_calls = []
+
     class FakeStreamEngine:
         @staticmethod
-        def infer_stream(text, voice=None):
-            assert text == "Xin chào"
-            assert voice == "Minh Đức"
+        def infer_stream(text, **kwargs):
+            stream_calls.append((text, kwargs))
             yield np.array([0.0, 0.25, -0.25], dtype=np.float32)
 
     monkeypatch.setattr(web_stream, "_model", FakeStreamEngine())
@@ -66,6 +79,28 @@ def test_public_frontend_api_works_before_model_load(monkeypatch):
     assert audio.status_code == 200
     assert audio.content.startswith(b"RIFF")
     assert audio.headers["content-type"].startswith("audio/wav")
+    assert stream_calls[0] == ("Xin chào", {"voice": "Minh Đức"})
+
+    cloned = client.post(
+        "/stream/clone",
+        data={"text": "Giọng nói đã clone"},
+        files={"reference_audio": ("sample.wav", _wav_bytes(3), "audio/wav")},
+    )
+    assert cloned.status_code == 200
+    assert cloned.content.startswith(b"RIFF")
+    clone_text, clone_kwargs = stream_calls[1]
+    assert clone_text == "Giọng nói đã clone"
+    assert clone_kwargs["denoise"] is True
+    reference_path = Path(clone_kwargs["ref_audio"])
+    assert reference_path.name.startswith("vieneu-ref-")
+    assert not reference_path.exists(), "temporary voice sample must be deleted after streaming"
+
+    too_short = client.post(
+        "/stream/clone",
+        data={"text": "Không hợp lệ"},
+        files={"reference_audio": ("short.wav", _wav_bytes(0.5), "audio/wav")},
+    )
+    assert too_short.status_code == 422
 
 
 def test_model_is_loaded_only_when_loader_runs(monkeypatch):

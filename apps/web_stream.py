@@ -13,6 +13,7 @@ from __future__ import annotations
 import gc
 import io
 import json
+import tempfile
 import threading
 import time
 import wave
@@ -21,11 +22,14 @@ from typing import Any, Literal, Optional
 
 import numpy as np
 import uvicorn
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
+from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field
 
 SAMPLE_RATE = 48_000
+MAX_REFERENCE_BYTES = 25 * 1024 * 1024
+MIN_REFERENCE_SECONDS = 1.0
+MAX_REFERENCE_SECONDS = 15.0
 MODEL_NAME = "VieNeu-TTS-v3-Turbo"
 MODEL_VARIANT = "int8 · CPU/ONNX"
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -193,36 +197,107 @@ def _clean_text(text: str) -> str:
     return cleaned
 
 
-def _audio_stream(text: str, voice_id: Optional[str]) -> StreamingResponse:
+def _validate_reference(path: Path) -> float:
+    """Validate a reference clip without importing or initializing the model."""
+    try:
+        import soundfile as sf
+
+        info = sf.info(str(path))
+    except Exception as exc:  # noqa: BLE001 - libsndfile reports format-specific errors
+        raise HTTPException(
+            status_code=422,
+            detail="Không đọc được audio mẫu. Hãy dùng WAV, FLAC, OGG hoặc MP3 hợp lệ.",
+        ) from exc
+
+    duration = float(info.duration)
+    if duration < MIN_REFERENCE_SECONDS:
+        raise HTTPException(status_code=422, detail="Audio mẫu cần dài ít nhất 1 giây.")
+    if duration > MAX_REFERENCE_SECONDS:
+        raise HTTPException(status_code=422, detail="Audio mẫu không được dài quá 15 giây.")
+    return duration
+
+
+async def _store_reference(upload: UploadFile) -> tuple[Path, float]:
+    """Store a bounded upload in a temporary file and return its duration."""
+    suffix_by_type = {
+        "audio/wav": ".wav",
+        "audio/x-wav": ".wav",
+        "audio/flac": ".flac",
+        "audio/ogg": ".ogg",
+        "audio/mpeg": ".mp3",
+        "audio/mp3": ".mp3",
+    }
+    original_suffix = Path(upload.filename or "").suffix.lower()
+    allowed_suffixes = {".wav", ".flac", ".ogg", ".mp3"}
+    suffix = suffix_by_type.get(upload.content_type or "")
+    if suffix is None and original_suffix in allowed_suffixes:
+        suffix = original_suffix
+    if suffix is None:
+        raise HTTPException(status_code=415, detail="Định dạng hỗ trợ: WAV, FLAC, OGG hoặc MP3.")
+
+    temp_path: Path | None = None
+    total = 0
+    try:
+        with tempfile.NamedTemporaryFile(prefix="vieneu-ref-", suffix=suffix, delete=False) as temp:
+            temp_path = Path(temp.name)
+            while chunk := await upload.read(1024 * 1024):
+                total += len(chunk)
+                if total > MAX_REFERENCE_BYTES:
+                    raise HTTPException(status_code=413, detail="Audio mẫu không được vượt quá 25 MB.")
+                temp.write(chunk)
+        duration = _validate_reference(temp_path)
+        return temp_path, duration
+    except Exception:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
+        raise
+    finally:
+        await upload.close()
+
+
+def _audio_stream(
+    text: str,
+    voice_id: Optional[str] = None,
+    reference_path: Path | None = None,
+) -> StreamingResponse:
     engine = _ready_model()
 
     def generate():
-        header = io.BytesIO()
-        with wave.open(header, "wb") as output:
-            output.setnchannels(1)
-            output.setsampwidth(2)
-            output.setframerate(SAMPLE_RATE)
-            output.setnframes(1_000_000_000)
-        yield header.getvalue()
+        try:
+            header = io.BytesIO()
+            with wave.open(header, "wb") as output:
+                output.setnchannels(1)
+                output.setsampwidth(2)
+                output.setframerate(SAMPLE_RATE)
+                output.setnframes(1_000_000_000)
+            yield header.getvalue()
 
-        started_at = time.perf_counter()
-        first_audio_at = None
-        emitted = 0
-        chunk_count = 0
-        for chunk in engine.infer_stream(text, voice=voice_id or None):
-            if chunk is None or len(chunk) == 0:
-                continue
-            if first_audio_at is None:
-                first_audio_at = time.perf_counter() - started_at
-                print(f"[VieNeu] Time to first audio: {first_audio_at * 1000:.0f} ms")
-            emitted += len(chunk)
-            chunk_count += 1
-            yield _pcm16(chunk)
+            started_at = time.perf_counter()
+            first_audio_at = None
+            emitted = 0
+            chunk_count = 0
+            infer_kwargs = (
+                {"ref_audio": str(reference_path), "denoise": True}
+                if reference_path is not None
+                else {"voice": voice_id or None}
+            )
+            for chunk in engine.infer_stream(text, **infer_kwargs):
+                if chunk is None or len(chunk) == 0:
+                    continue
+                if first_audio_at is None:
+                    first_audio_at = time.perf_counter() - started_at
+                    print(f"[VieNeu] Time to first audio: {first_audio_at * 1000:.0f} ms")
+                emitted += len(chunk)
+                chunk_count += 1
+                yield _pcm16(chunk)
 
-        duration = emitted / SAMPLE_RATE
-        elapsed = time.perf_counter() - started_at
-        rtf = elapsed / duration if duration else 0
-        print(f"[VieNeu] {chunk_count} chunks | audio {duration:.2f}s | RTF {rtf:.3f}")
+            duration = emitted / SAMPLE_RATE
+            elapsed = time.perf_counter() - started_at
+            rtf = elapsed / duration if duration else 0
+            print(f"[VieNeu] {chunk_count} chunks | audio {duration:.2f}s | RTF {rtf:.3f}")
+        finally:
+            if reference_path is not None:
+                reference_path.unlink(missing_ok=True)
 
     return StreamingResponse(
         generate(),
@@ -247,6 +322,21 @@ class StreamRequest(BaseModel):
 @app.post("/stream")
 async def stream_post(request: StreamRequest) -> StreamingResponse:
     return _audio_stream(_clean_text(request.text), request.voice_id)
+
+
+@app.post("/stream/clone")
+async def stream_clone(
+    text: str = Form(min_length=1, max_length=5_000),
+    reference_audio: UploadFile = File(...),
+) -> StreamingResponse:
+    """Clone the uploaded voice and stream synthesized audio; never persist samples."""
+    _ready_model()
+    reference_path, _ = await _store_reference(reference_audio)
+    try:
+        return _audio_stream(_clean_text(text), reference_path=reference_path)
+    except Exception:
+        reference_path.unlink(missing_ok=True)
+        raise
 
 
 def main() -> None:

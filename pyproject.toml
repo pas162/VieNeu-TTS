@@ -79,6 +79,7 @@ dependencies = [
     "gradio>=5.49.1",       # web UI (vieneu-web)
     "fastapi>=0.115",       # lazy-loading VieNeu Studio backend
     "uvicorn>=0.30",        # local VieNeu Studio server
+    "python-multipart>=0.0.20", # voice-cloning audio uploads
     "perth>=0.2.0",         # optional audio watermark (skipped gracefully if absent)
 ]
 

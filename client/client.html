@@ -172,12 +172,44 @@
 
     .field { margin-bottom: 20px; }
     .field label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; font-weight: 720; letter-spacing: .02em; }
+    .voice-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 18px; padding: 4px; border-radius: 12px; background: var(--canvas-soft); }
+    .voice-tab { min-height: 38px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12.5px; font-weight: 700; transition: .16s; }
+    .voice-tab:hover { color: var(--ink); }
+    .voice-tab.active { background: var(--surface-raised); color: var(--forest); box-shadow: 0 2px 9px rgba(30, 42, 34, .08); }
+    .voice-pane { display: none; }
+    .voice-pane.active { display: block; animation: rise .2s ease both; }
     select { width: 100%; height: 46px; padding: 0 38px 0 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--ink); cursor: pointer; }
     select:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 4px color-mix(in srgb, var(--forest) 10%, transparent); }
     .voice-preview { display: flex; align-items: center; gap: 11px; margin-top: 11px; padding: 11px; border-radius: 12px; background: var(--canvas-soft); }
     .avatar { width: 38px; height: 38px; display: grid; place-items: center; flex: none; border-radius: 50%; background: var(--mint); color: var(--forest-strong); font-weight: 780; }
     .voice-preview strong { display: block; font-size: 13px; }
     .voice-preview span { display: block; margin-top: 2px; color: var(--muted); font-size: 11.5px; }
+    .drop-zone { display: block; padding: 19px 14px; border: 1.5px dashed var(--line-strong); border-radius: 14px; background: var(--surface-raised); text-align: center; cursor: pointer; transition: .16s; }
+    .drop-zone:hover, .drop-zone.dragging { border-color: var(--forest); background: var(--forest-soft); }
+    .drop-zone svg { width: 23px; height: 23px; color: var(--forest); }
+    .drop-zone strong { display: block; margin-top: 6px; font-size: 12.5px; }
+    .drop-zone span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .drop-zone input { display: none; }
+    .clone-or { display: flex; align-items: center; gap: 9px; margin: 13px 0; color: var(--quiet); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+    .clone-or::before, .clone-or::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+    .record-btn { width: 100%; min-height: 43px; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--ink); cursor: pointer; font-size: 12.5px; font-weight: 700; }
+    .record-btn:hover { border-color: var(--coral); color: var(--coral); }
+    .record-btn.recording { border-color: var(--coral); background: var(--coral-soft); color: var(--coral); }
+    .record-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--coral); }
+    .recording .record-dot { border-radius: 2px; animation: pulse 1s ease-in-out infinite; }
+    .reference-card { display: none; margin-top: 12px; padding: 11px; border: 1px solid var(--line); border-radius: 12px; background: var(--canvas-soft); }
+    .reference-card.show { display: block; }
+    .reference-meta { display: flex; align-items: center; gap: 9px; }
+    .reference-meta svg { width: 18px; height: 18px; flex: none; color: var(--forest); }
+    .reference-meta div { min-width: 0; flex: 1; }
+    .reference-meta strong, .reference-meta span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .reference-meta strong { font-size: 12px; }
+    .reference-meta span { color: var(--muted); font-size: 10.5px; }
+    .remove-reference { border: 0; background: transparent; color: var(--quiet); cursor: pointer; padding: 5px; font-size: 18px; line-height: 1; }
+    .remove-reference:hover { color: var(--danger); }
+    .reference-audio { width: 100%; height: 34px; margin-top: 9px; }
+    .clone-tip { display: flex; gap: 7px; margin: 11px 1px 0; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
+    .clone-tip svg { width: 14px; height: 14px; flex: none; margin-top: 1px; color: var(--forest); }
     .divider { height: 1px; margin: 22px 0; background: var(--line); }
     .feature-list { display: grid; gap: 12px; }
     .feature { display: flex; gap: 10px; color: var(--muted); font-size: 12.5px; }
@@ -337,14 +369,42 @@
         </section>
 
         <aside class="panel side">
-          <div class="section-heading"><div><h2>Chọn giọng đọc</h2><p>14 giọng Việt được tuyển chọn.</p></div></div>
-          <div class="field">
-            <label for="voiceSelect">Giọng nói</label>
-            <select id="voiceSelect" disabled><option>Đang đọc danh sách giọng…</option></select>
-            <div class="voice-preview">
-              <div class="avatar" id="voiceAvatar">V</div>
-              <div><strong id="voiceName">Chưa chọn giọng</strong><span id="voiceDescription">Danh sách được lưu sẵn trong ứng dụng.</span></div>
+          <div class="section-heading"><div><h2>Chọn giọng đọc</h2><p>Dùng giọng có sẵn hoặc clone giọng của bạn.</p></div></div>
+          <div class="voice-tabs" role="tablist" aria-label="Nguồn giọng đọc">
+            <button class="voice-tab active" type="button" data-voice-mode="preset" role="tab" aria-selected="true">Giọng có sẵn</button>
+            <button class="voice-tab" type="button" data-voice-mode="clone" role="tab" aria-selected="false">Clone giọng</button>
+          </div>
+          <div class="voice-pane active" id="presetPane" role="tabpanel">
+            <div class="field">
+              <label for="voiceSelect">Giọng nói</label>
+              <select id="voiceSelect" disabled><option>Đang đọc danh sách giọng…</option></select>
+              <div class="voice-preview">
+                <div class="avatar" id="voiceAvatar">V</div>
+                <div><strong id="voiceName">Chưa chọn giọng</strong><span id="voiceDescription">Danh sách được lưu sẵn trong ứng dụng.</span></div>
+              </div>
             </div>
+          </div>
+          <div class="voice-pane" id="clonePane" role="tabpanel">
+            <label class="drop-zone" id="dropZone" for="referenceInput" tabindex="0" role="button">
+              <input id="referenceInput" type="file" accept=".wav,.flac,.ogg,.mp3,audio/wav,audio/flac,audio/ogg,audio/mpeg">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 20h14"/></svg>
+              <strong>Tải audio giọng mẫu</strong>
+              <span>WAV, FLAC, OGG hoặc MP3 · tối đa 25 MB</span>
+            </label>
+            <div class="clone-or">hoặc</div>
+            <button class="record-btn" id="recordBtn" type="button"><i class="record-dot"></i><span id="recordLabel">Ghi âm trực tiếp</span><b id="recordTime" hidden>00:00</b></button>
+            <div class="reference-card" id="referenceCard">
+              <div class="reference-meta">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13M9 9l12-2M6 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm15-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+                <div><strong id="referenceName">Audio mẫu</strong><span id="referenceDetail">Sẵn sàng clone</span></div>
+                <button class="remove-reference" id="removeReference" type="button" aria-label="Xóa audio mẫu">×</button>
+              </div>
+              <audio class="reference-audio ready" id="referencePreview" controls preload="metadata"></audio>
+            </div>
+            <p class="clone-tip">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
+              <span>Nên dùng đoạn nói sạch dài 3–5 giây, chỉ một người nói. File tạm được xóa ngay sau khi tạo.</span>
+            </p>
           </div>
           <div class="divider"></div>
           <div class="feature-list">
@@ -355,6 +415,10 @@
             <div class="feature">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14a8 8 0 0 1 16 0M6 18h.01M10 18h.01M14 18h.01M18 18h.01"/></svg>
               <div><strong>Streaming 48 kHz</strong><br>Nghe ngay, không cần đợi tạo xong.</div>
+            </div>
+            <div class="feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg>
+              <div><strong>Clone giọng tức thì</strong><br>Tải mẫu hoặc ghi âm ngay trong trình duyệt.</div>
             </div>
             <div class="feature">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
@@ -381,7 +445,11 @@
       modelTitle: $('modelTitle'), modelDescription: $('modelDescription'), statusChip: $('statusChip'), statusIcon: $('statusIcon'),
       result: $('resultPanel'), resultTitle: $('resultTitle'), resultDetail: $('resultDetail'), visualizer: $('visualizer'),
       metric: $('ttfaMetric'), player: $('audioPlayer'), download: $('downloadLink'), toast: $('toast'),
-      voiceName: $('voiceName'), voiceDescription: $('voiceDescription'), voiceAvatar: $('voiceAvatar')
+      voiceName: $('voiceName'), voiceDescription: $('voiceDescription'), voiceAvatar: $('voiceAvatar'),
+      voiceTabs: [...document.querySelectorAll('[data-voice-mode]')], presetPane: $('presetPane'), clonePane: $('clonePane'),
+      dropZone: $('dropZone'), referenceInput: $('referenceInput'), referenceCard: $('referenceCard'),
+      referenceName: $('referenceName'), referenceDetail: $('referenceDetail'), referencePreview: $('referencePreview'),
+      removeReference: $('removeReference'), record: $('recordBtn'), recordLabel: $('recordLabel'), recordTime: $('recordTime')
     };
 
     const samples = {
@@ -401,6 +469,17 @@
     let pcmParts = [];
     let resultUrl = null;
     let toastTimer = null;
+    let voiceMode = 'preset';
+    let referenceFile = null;
+    let referenceUrl = null;
+    let recordingStream = null;
+    let recordingContext = null;
+    let recordingSource = null;
+    let recordingProcessor = null;
+    let recordingChunks = [];
+    let recordingSampleRate = 48000;
+    let recordingStarted = 0;
+    let recordingTimer = null;
 
     function setTheme(theme) {
       document.documentElement.dataset.theme = theme;
@@ -529,6 +608,145 @@
     }
     elements.voice.addEventListener('change', updateVoicePreview);
 
+    function setVoiceMode(mode) {
+      if (recordingStream && mode !== 'clone') {
+        notify('Hãy dừng ghi âm trước khi đổi chế độ.', true);
+        return;
+      }
+      voiceMode = mode;
+      elements.voiceTabs.forEach((tab) => {
+        const active = tab.dataset.voiceMode === mode;
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-selected', String(active));
+      });
+      elements.presetPane.classList.toggle('active', mode === 'preset');
+      elements.clonePane.classList.toggle('active', mode === 'clone');
+      elements.generate.querySelector('span').textContent = mode === 'clone' ? 'Clone và tạo giọng' : 'Tạo và nghe ngay';
+    }
+    elements.voiceTabs.forEach((tab) => tab.addEventListener('click', () => setVoiceMode(tab.dataset.voiceMode)));
+
+    function probeDuration(url) {
+      return new Promise((resolve, reject) => {
+        const probe = new Audio();
+        probe.preload = 'metadata';
+        probe.onloadedmetadata = () => resolve(probe.duration);
+        probe.onerror = () => reject(new Error('Không đọc được audio mẫu.'));
+        probe.src = url;
+      });
+    }
+
+    function clearReference() {
+      referenceFile = null;
+      elements.referenceInput.value = '';
+      elements.referencePreview.pause();
+      elements.referencePreview.removeAttribute('src');
+      elements.referenceCard.classList.remove('show');
+      if (referenceUrl) { URL.revokeObjectURL(referenceUrl); referenceUrl = null; }
+    }
+
+    async function setReferenceFile(file, knownDuration = null) {
+      if (!file) return;
+      const supported = /\.(wav|flac|ogg|mp3)$/i.test(file.name) || ['audio/wav', 'audio/x-wav', 'audio/flac', 'audio/ogg', 'audio/mpeg', 'audio/mp3'].includes(file.type);
+      if (!supported) { notify('Hãy chọn file WAV, FLAC, OGG hoặc MP3.', true); return; }
+      if (file.size > 25 * 1024 * 1024) { notify('Audio mẫu không được vượt quá 25 MB.', true); return; }
+
+      const nextUrl = URL.createObjectURL(file);
+      try {
+        const duration = knownDuration ?? await probeDuration(nextUrl);
+        if (!Number.isFinite(duration) || duration < 1) throw new Error('Audio mẫu cần dài ít nhất 1 giây.');
+        if (duration > 15) throw new Error('Audio mẫu không được dài quá 15 giây.');
+        clearReference();
+        referenceFile = file;
+        referenceUrl = nextUrl;
+        elements.referenceName.textContent = file.name;
+        elements.referenceDetail.textContent = `${duration.toFixed(1)} giây · ${(file.size / 1024 / 1024).toFixed(1)} MB · sẵn sàng clone`;
+        elements.referencePreview.src = referenceUrl;
+        elements.referenceCard.classList.add('show');
+        notify(duration >= 3 && duration <= 5 ? 'Audio mẫu rất phù hợp để clone.' : 'Đã nhận audio. Mẫu 3–5 giây thường cho kết quả tốt nhất.');
+      } catch (error) {
+        URL.revokeObjectURL(nextUrl);
+        notify(error.message, true);
+      }
+    }
+
+    elements.referenceInput.addEventListener('change', () => setReferenceFile(elements.referenceInput.files[0]));
+    elements.removeReference.addEventListener('click', clearReference);
+    ['dragenter', 'dragover'].forEach((eventName) => elements.dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault(); elements.dropZone.classList.add('dragging');
+    }));
+    ['dragleave', 'drop'].forEach((eventName) => elements.dropZone.addEventListener(eventName, (event) => {
+      event.preventDefault(); elements.dropZone.classList.remove('dragging');
+    }));
+    elements.dropZone.addEventListener('drop', (event) => setReferenceFile(event.dataTransfer.files[0]));
+    elements.dropZone.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); elements.referenceInput.click(); }
+    });
+
+    function mergeRecordingChunks(chunks) {
+      const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+      const merged = new Float32Array(length);
+      let offset = 0;
+      chunks.forEach((chunk) => { merged.set(chunk, offset); offset += chunk.length; });
+      return merged;
+    }
+
+    function floatToPcm16(samples) {
+      const bytes = new Uint8Array(samples.length * 2);
+      const view = new DataView(bytes.buffer);
+      samples.forEach((sample, index) => {
+        const clipped = Math.max(-1, Math.min(1, sample));
+        view.setInt16(index * 2, clipped < 0 ? clipped * 32768 : clipped * 32767, true);
+      });
+      return bytes;
+    }
+
+    async function startRecording() {
+      if (!navigator.mediaDevices?.getUserMedia) { notify('Trình duyệt không hỗ trợ ghi âm.', true); return; }
+      try {
+        recordingStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        const Context = window.AudioContext || window.webkitAudioContext;
+        recordingContext = new Context(); await recordingContext.resume();
+        recordingSampleRate = recordingContext.sampleRate;
+        recordingChunks = [];
+        recordingSource = recordingContext.createMediaStreamSource(recordingStream);
+        recordingProcessor = recordingContext.createScriptProcessor(4096, 1, 1);
+        recordingProcessor.onaudioprocess = (event) => recordingChunks.push(new Float32Array(event.inputBuffer.getChannelData(0)));
+        recordingSource.connect(recordingProcessor); recordingProcessor.connect(recordingContext.destination);
+        recordingStarted = performance.now();
+        elements.record.classList.add('recording'); elements.recordLabel.textContent = 'Dừng ghi âm'; elements.recordTime.hidden = false;
+        recordingTimer = setInterval(() => {
+          const seconds = (performance.now() - recordingStarted) / 1000;
+          elements.recordTime.textContent = `00:${String(Math.floor(seconds)).padStart(2, '0')}`;
+          if (seconds >= 10) stopRecording();
+        }, 200);
+      } catch (error) {
+        recordingStream?.getTracks().forEach((track) => track.stop());
+        if (recordingContext) await recordingContext.close().catch(() => {});
+        recordingStream = null;
+        recordingContext = null; recordingProcessor = null; recordingSource = null;
+        notify(`Không mở được microphone: ${error.message}`, true);
+      }
+    }
+
+    async function stopRecording(cancel = false) {
+      if (!recordingStream) return;
+      const duration = (performance.now() - recordingStarted) / 1000;
+      clearInterval(recordingTimer); recordingTimer = null;
+      recordingProcessor?.disconnect(); recordingSource?.disconnect();
+      recordingStream.getTracks().forEach((track) => track.stop());
+      recordingStream = null;
+      await recordingContext?.close();
+      recordingContext = null; recordingProcessor = null; recordingSource = null;
+      elements.record.classList.remove('recording'); elements.recordLabel.textContent = 'Ghi âm lại'; elements.recordTime.hidden = true;
+      if (cancel) { recordingChunks = []; return; }
+      if (duration < 1) { recordingChunks = []; notify('Hãy ghi âm ít nhất 1 giây.', true); return; }
+      const pcm = floatToPcm16(mergeRecordingChunks(recordingChunks)); recordingChunks = [];
+      const blob = wavBlob([pcm], recordingSampleRate);
+      const file = new File([blob], `giong-mau-${Date.now()}.wav`, { type: 'audio/wav' });
+      await setReferenceFile(file, duration);
+    }
+    elements.record.addEventListener('click', () => recordingStream ? stopRecording() : startRecording());
+
     function getAudioContext() {
       if (!audioContext) {
         const Context = window.AudioContext || window.webkitAudioContext;
@@ -577,23 +795,33 @@
       const text = elements.text.value.trim();
       if (modelState !== 'ready') { notify('Hãy khởi động model trước khi tạo giọng nói.', true); elements.load.focus(); return; }
       if (!text) { notify('Bạn chưa nhập nội dung cần đọc.', true); elements.text.focus(); return; }
+      if (voiceMode === 'clone' && !referenceFile) { notify('Hãy tải lên hoặc ghi một đoạn giọng mẫu trước.', true); elements.dropZone.focus(); return; }
+      if (recordingStream) { notify('Hãy dừng ghi âm trước khi tạo giọng.', true); return; }
 
       stopAudio('Đang bắt đầu lượt tạo mới…');
       abortController = new AbortController(); pcmParts = [];
       if (resultUrl) { URL.revokeObjectURL(resultUrl); resultUrl = null; }
       elements.player.classList.remove('ready'); elements.player.removeAttribute('src'); elements.download.hidden = true;
       elements.result.classList.add('show'); elements.visualizer.classList.add('playing');
-      elements.resultTitle.textContent = 'Đang tạo giọng nói…'; elements.resultDetail.textContent = 'Audio sẽ phát ngay khi có dữ liệu đầu tiên.'; elements.metric.textContent = 'Đang chờ';
+      elements.resultTitle.textContent = voiceMode === 'clone' ? 'Đang clone giọng nói…' : 'Đang tạo giọng nói…';
+      elements.resultDetail.textContent = voiceMode === 'clone' ? 'Đang phân tích giọng mẫu; audio sẽ phát ngay khi sẵn sàng.' : 'Audio sẽ phát ngay khi có dữ liệu đầu tiên.';
+      elements.metric.textContent = 'Đang chờ';
       elements.generate.disabled = true; elements.stop.disabled = false;
 
       const context = getAudioContext(); await context.resume(); playHead = context.currentTime + .1;
       const started = performance.now(); let firstAudio = false; let carry = new Uint8Array(0); let headerRead = false;
 
       try {
-        const response = await fetch('/stream', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: abortController.signal,
-          body: JSON.stringify({ text, voice_id: elements.voice.value || null })
-        });
+        let response;
+        if (voiceMode === 'clone') {
+          const form = new FormData(); form.append('text', text); form.append('reference_audio', referenceFile, referenceFile.name);
+          response = await fetch('/stream/clone', { method: 'POST', signal: abortController.signal, body: form });
+        } else {
+          response = await fetch('/stream', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: abortController.signal,
+            body: JSON.stringify({ text, voice_id: elements.voice.value || null })
+          });
+        }
         if (!response.ok) {
           const data = await response.json().catch(() => ({})); throw new Error(data.detail || `HTTP ${response.status}`);
         }
@@ -632,7 +860,11 @@
     elements.text.addEventListener('keydown', (event) => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); generate(); } });
     elements.player.addEventListener('play', () => elements.visualizer.classList.add('playing'));
     elements.player.addEventListener('pause', () => elements.visualizer.classList.remove('playing'));
-    window.addEventListener('beforeunload', () => { if (resultUrl) URL.revokeObjectURL(resultUrl); });
+    window.addEventListener('beforeunload', () => {
+      if (resultUrl) URL.revokeObjectURL(resultUrl);
+      if (referenceUrl) URL.revokeObjectURL(referenceUrl);
+      recordingStream?.getTracks().forEach((track) => track.stop());
+    });
 
     Promise.all([refreshStatus(), loadVoices()]);
   </script>
