@@ -186,6 +186,7 @@
     .voice-tab { min-height: 38px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12.5px; font-weight: 700; transition: .16s; }
     .voice-tab:hover { color: var(--ink); }
     .voice-tab.active { background: var(--surface-raised); color: var(--forest); box-shadow: 0 2px 9px rgba(30, 42, 34, .08); }
+    .voice-tab:disabled { opacity: .45; cursor: not-allowed; }
     .voice-pane { display: none; }
     .voice-pane.active { display: block; animation: rise .2s ease both; }
     select { width: 100%; height: 46px; padding: 0 38px 0 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--ink); cursor: pointer; }
@@ -218,6 +219,9 @@
     .remove-reference { border: 0; background: transparent; color: var(--quiet); cursor: pointer; padding: 5px; font-size: 18px; line-height: 1; }
     .remove-reference:hover { color: var(--danger); }
     .reference-audio { width: 100%; height: 34px; margin-top: 9px; }
+    .clone-transcript { margin-top: 14px; }
+    .clone-transcript label { display: block; margin-bottom: 7px; color: var(--muted); font-size: 11.5px; font-weight: 720; }
+    .clone-transcript textarea { min-height: 82px; padding: 11px 12px; border-radius: 12px; font-size: 13px; line-height: 1.5; }
     .clone-tip { display: flex; gap: 7px; margin: 11px 1px 0; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
     .clone-tip svg { width: 14px; height: 14px; flex: none; margin-top: 1px; color: var(--forest); }
     .divider { height: 1px; margin: 22px 0; background: var(--line); }
@@ -419,9 +423,13 @@
               </div>
               <audio class="reference-audio ready" id="referencePreview" controls preload="metadata"></audio>
             </div>
+            <div class="clone-transcript" id="cloneTranscriptWrap" hidden>
+              <label for="cloneTranscript">Nội dung chính xác trong audio mẫu</label>
+              <textarea id="cloneTranscript" maxlength="2000" placeholder="Nhập đúng từng câu và dấu câu trong đoạn giọng mẫu…"></textarea>
+            </div>
             <p class="clone-tip">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
-              <span>Nên dùng đoạn nói sạch dài 3–5 giây, chỉ một người nói. File tạm được xóa ngay sau khi tạo.</span>
+              <span id="cloneTipText">Nên dùng đoạn nói sạch dài 3–5 giây, chỉ một người nói. File tạm được xóa ngay sau khi tạo.</span>
             </p>
           </div>
           <div class="divider"></div>
@@ -432,7 +440,7 @@
             </div>
             <div class="feature">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14a8 8 0 0 1 16 0M6 18h.01M10 18h.01M14 18h.01M18 18h.01"/></svg>
-              <div><strong>Streaming 48 kHz</strong><br>Nghe ngay, không cần đợi tạo xong.</div>
+              <div><strong>Streaming 24/48 kHz</strong><br>Tự đổi theo model và nghe ngay khi đang tạo.</div>
             </div>
             <div class="feature">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3"/></svg>
@@ -448,7 +456,7 @@
     </main>
 
     <footer>
-      <span>VieNeu Studio · VieNeu-TTS v3 Turbo · CPU INT8</span>
+      <span>VieNeu Studio · v1, v2, v2 Turbo &amp; v3 Turbo</span>
       <span>Mã nguồn bởi <a href="https://github.com/pas162" target="_blank" rel="noreferrer">@pas162</a></span>
     </footer>
   </div>
@@ -467,7 +475,8 @@
       voiceTabs: [...document.querySelectorAll('[data-voice-mode]')], presetPane: $('presetPane'), clonePane: $('clonePane'),
       dropZone: $('dropZone'), referenceInput: $('referenceInput'), referenceCard: $('referenceCard'),
       referenceName: $('referenceName'), referenceDetail: $('referenceDetail'), referencePreview: $('referencePreview'),
-      removeReference: $('removeReference'), record: $('recordBtn'), recordLabel: $('recordLabel'), recordTime: $('recordTime')
+      removeReference: $('removeReference'), record: $('recordBtn'), recordLabel: $('recordLabel'), recordTime: $('recordTime'),
+      cloneTranscriptWrap: $('cloneTranscriptWrap'), cloneTranscript: $('cloneTranscript'), cloneTipText: $('cloneTipText')
     };
 
     const samples = {
@@ -478,6 +487,7 @@
     };
 
     let voices = [];
+    let voiceRequestId = 0;
     let modelCatalog = [];
     let loadedModelId = null;
     let modelState = 'idle';
@@ -532,6 +542,19 @@
       return modelCatalog.find((model) => model.id === elements.modelSelect.value) || modelCatalog[0];
     }
 
+    function renderModelCapabilities() {
+      const selected = selectedModel();
+      if (!selected) return;
+      const cloneTab = elements.voiceTabs.find((tab) => tab.dataset.voiceMode === 'clone');
+      cloneTab.disabled = !selected.supports_cloning;
+      cloneTab.title = selected.supports_cloning ? '' : `${selected.name} không hỗ trợ clone giọng`;
+      elements.cloneTranscriptWrap.hidden = selected.clone_mode !== 'transcript';
+      elements.cloneTipText.textContent = selected.clone_mode === 'transcript'
+        ? 'Model v1/v2 cần audio sạch 3–5 giây và nội dung mẫu phải khớp chính xác, kể cả dấu câu.'
+        : 'Nên dùng đoạn nói sạch dài 3–5 giây, chỉ một người nói. File tạm được xóa ngay sau khi tạo.';
+      if (!selected.supports_cloning && voiceMode === 'clone') setVoiceMode('preset');
+    }
+
     function renderModelSelection() {
       const selected = selectedModel();
       if (!selected || modelState === 'loading') return;
@@ -541,7 +564,7 @@
 
       if (isLoadedSelection) {
         elements.modelTitle.textContent = selected.name;
-        elements.modelDescription.textContent = `${selected.variant} · 48 kHz · sẵn sàng tạo và clone giọng`;
+        elements.modelDescription.textContent = `${selected.variant} · ${selected.sample_rate / 1000} kHz · sẵn sàng tạo giọng`;
         elements.statusChip.className = 'status-chip ready';
         chipText.textContent = 'Sẵn sàng';
         buttonText.textContent = 'Giải phóng model';
@@ -549,7 +572,8 @@
       } else {
         const running = modelCatalog.find((model) => model.id === loadedModelId);
         elements.modelTitle.textContent = running ? 'Bạn đã chọn một model khác' : 'Chọn model để bắt đầu';
-        elements.modelDescription.textContent = running ? `${selected.name} chưa được tải · hiện đang chạy ${running.name}` : `${selected.name} · ${selected.description}`;
+        const availability = selected.available ? selected.description : `Cần cài backend · ${selected.install_hint}`;
+        elements.modelDescription.textContent = running ? `${selected.name} chưa được tải · hiện đang chạy ${running.name}` : `${selected.name} · ${availability}`;
         elements.statusChip.className = 'status-chip';
         chipText.textContent = running ? 'Chưa tải lựa chọn' : 'Chưa khởi động';
         buttonText.textContent = running ? 'Tải model này' : 'Tải & khởi động';
@@ -557,6 +581,7 @@
       }
       elements.load.disabled = false;
       elements.generate.disabled = modelState !== 'ready' || loadedModelId !== selected.id;
+      renderModelCapabilities();
     }
 
     function setModelStatus(status) {
@@ -578,6 +603,7 @@
         chipText.textContent = 'Sẵn sàng';
         buttonText.textContent = 'Giải phóng model';
         elements.load.dataset.action = 'unload';
+        loadVoices(status.model_id);
       } else if (modelState === 'loading') {
         elements.modelTitle.textContent = `Đang tải ${status.model}…`;
         elements.modelDescription.textContent = 'Lần đầu có thể mất vài phút; bạn vẫn có thể soạn nội dung trong lúc chờ.';
@@ -606,19 +632,27 @@
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         modelCatalog = await response.json();
         elements.modelSelect.innerHTML = '';
-        modelCatalog.forEach((model) => {
-          const option = document.createElement('option');
-          option.value = model.id;
-          option.textContent = model.name + (model.recommended ? ' · Khuyên dùng' : '');
-          elements.modelSelect.appendChild(option);
+        [...new Set(modelCatalog.map((model) => model.family))].forEach((family) => {
+          const group = document.createElement('optgroup'); group.label = family;
+          modelCatalog.filter((model) => model.family === family).forEach((model) => {
+            const option = document.createElement('option');
+            option.value = model.id;
+            option.textContent = `${model.name} · ${model.device}` + (model.recommended ? ' · Khuyên dùng' : '') + (!model.available ? ' · Cần cài thêm' : '');
+            group.appendChild(option);
+          });
+          elements.modelSelect.appendChild(group);
         });
         elements.modelSelect.disabled = modelCatalog.length === 0;
+        renderModelCapabilities();
       } catch (error) {
         elements.modelSelect.innerHTML = '<option>Không tải được danh sách</option>';
         notify(`Lỗi tải danh sách model: ${error.message}`, true);
       }
     }
-    elements.modelSelect.addEventListener('change', renderModelSelection);
+    elements.modelSelect.addEventListener('change', () => {
+      renderModelSelection();
+      loadVoices(elements.modelSelect.value);
+    });
 
     async function refreshStatus() {
       try {
@@ -671,11 +705,14 @@
       elements.voiceAvatar.textContent = selected.name.trim().charAt(0).toUpperCase();
     }
 
-    async function loadVoices() {
+    async function loadVoices(modelId = selectedModel()?.id || 'v3-turbo-int8') {
+      const requestId = ++voiceRequestId;
       try {
-        const response = await fetch('/api/voices');
+        const response = await fetch(`/api/voices?model_id=${encodeURIComponent(modelId)}`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        voices = await response.json();
+        const nextVoices = await response.json();
+        if (requestId !== voiceRequestId) return;
+        voices = nextVoices;
         elements.voice.innerHTML = '';
         voices.forEach((voice) => {
           const option = document.createElement('option'); option.value = voice.id; option.textContent = voice.name; elements.voice.appendChild(option);
@@ -877,6 +914,9 @@
       if (modelState !== 'ready') { notify('Hãy khởi động model trước khi tạo giọng nói.', true); elements.load.focus(); return; }
       if (!text) { notify('Bạn chưa nhập nội dung cần đọc.', true); elements.text.focus(); return; }
       if (voiceMode === 'clone' && !referenceFile) { notify('Hãy tải lên hoặc ghi một đoạn giọng mẫu trước.', true); elements.dropZone.focus(); return; }
+      if (voiceMode === 'clone' && selectedModel()?.clone_mode === 'transcript' && !elements.cloneTranscript.value.trim()) {
+        notify('Model v1/v2 cần nội dung chính xác của audio mẫu.', true); elements.cloneTranscript.focus(); return;
+      }
       if (recordingStream) { notify('Hãy dừng ghi âm trước khi tạo giọng.', true); return; }
 
       stopAudio('Đang bắt đầu lượt tạo mới…');
@@ -896,6 +936,7 @@
         let response;
         if (voiceMode === 'clone') {
           const form = new FormData(); form.append('text', text); form.append('reference_audio', referenceFile, referenceFile.name);
+          if (selectedModel()?.clone_mode === 'transcript') form.append('reference_text', elements.cloneTranscript.value.trim());
           response = await fetch('/stream/clone', { method: 'POST', signal: abortController.signal, body: form });
         } else {
           response = await fetch('/stream', {
@@ -907,15 +948,22 @@
           const data = await response.json().catch(() => ({})); throw new Error(data.detail || `HTTP ${response.status}`);
         }
         if (!response.body) throw new Error('Trình duyệt không hỗ trợ audio streaming.');
+        let streamSampleRate = Number(response.headers.get('X-Audio-Sample-Rate')) || selectedModel()?.sample_rate || 48000;
         const reader = response.body.getReader();
         while (true) {
           const { done, value } = await reader.read(); if (done) break;
           let bytes = value;
           if (carry.byteLength) { const joined = new Uint8Array(carry.byteLength + value.byteLength); joined.set(carry); joined.set(value, carry.byteLength); bytes = joined; carry = new Uint8Array(0); }
-          if (!headerRead) { if (bytes.byteLength < 44) { carry = bytes; continue; } bytes = bytes.slice(44); headerRead = true; }
+          if (!headerRead) {
+            if (bytes.byteLength < 44) { carry = bytes; continue; }
+            const header = new DataView(bytes.buffer, bytes.byteOffset, 44);
+            const headerRate = header.getUint32(24, true);
+            if (headerRate >= 8000 && headerRate <= 192000) streamSampleRate = headerRate;
+            bytes = bytes.slice(44); headerRead = true;
+          }
           const usable = bytes.byteLength - (bytes.byteLength % 2); if (usable < bytes.byteLength) carry = bytes.slice(usable);
           if (usable) {
-            processPcm(bytes.subarray(0, usable), 48000);
+            processPcm(bytes.subarray(0, usable), streamSampleRate);
             if (!firstAudio) {
               firstAudio = true; const ttfa = Math.round(performance.now() - started);
               elements.metric.textContent = `⚡ ${ttfa} ms`; elements.resultTitle.textContent = 'Đang phát trực tiếp'; elements.resultDetail.textContent = 'Âm thanh vẫn đang được tạo ở phía sau.';
@@ -923,11 +971,11 @@
           }
         }
 
-        const blob = wavBlob(pcmParts, 48000); resultUrl = URL.createObjectURL(blob);
+        const blob = wavBlob(pcmParts, streamSampleRate); resultUrl = URL.createObjectURL(blob);
         elements.player.src = resultUrl; elements.player.classList.add('ready');
         elements.download.href = resultUrl; elements.download.hidden = false;
         elements.visualizer.classList.remove('playing'); elements.resultTitle.textContent = 'Đã tạo xong';
-        elements.resultDetail.textContent = `File WAV 48 kHz · ${(blob.size / 1024 / 1024).toFixed(1)} MB`;
+        elements.resultDetail.textContent = `File WAV ${streamSampleRate / 1000} kHz · ${(blob.size / 1024 / 1024).toFixed(1)} MB`;
       } catch (error) {
         if (error.name !== 'AbortError') {
           elements.visualizer.classList.remove('playing'); elements.resultTitle.textContent = 'Chưa tạo được audio'; elements.resultDetail.textContent = error.message; notify(error.message, true);
@@ -947,7 +995,7 @@
       recordingStream?.getTracks().forEach((track) => track.stop());
     });
 
-    Promise.all([loadModels(), loadVoices()]).then(refreshStatus);
+    loadModels().then(() => loadVoices()).then(refreshStatus);
   </script>
 </body>
 </html>

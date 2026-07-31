@@ -189,14 +189,16 @@ for chunk in vieneu.infer_stream("Xin chào các bạn!", voice="Minh Đức"):
 
 A friendly **FastAPI streaming studio** is available in [`apps/web_stream.py`](apps/web_stream.py). The frontend starts instantly and **does not import or download a model at startup**. Voice metadata is bundled locally; the model is downloaded/initialized only after you explicitly click **Start model** in the UI.
 
-Before loading, choose **v3 Turbo INT8** (recommended, lighter/faster on CPU) or **v3 Turbo FP32** (maximum quality, more memory and slower). Changing the selection itself never downloads anything.
+The model picker exposes every supported local family: **v3 Turbo INT8/FP32 CPU**, **v3 Turbo GPU**, **v2 Turbo CPU/GPU**, **v2 GPU**, and **v1 GPU**. Changing the selection itself never downloads anything. Models whose optional runtime is not installed remain visible and show the exact `uv` command required before they can be loaded.
 
-The **Voice cloning** tab accepts a WAV/FLAC/OGG/MP3 sample or records a WAV directly in the browser. A clean, single-speaker clip of 3–5 seconds works best. Samples are stored only in a temporary file and deleted immediately after streaming finishes.
+The **Voice cloning** tab accepts a WAV/FLAC/OGG/MP3 sample or records a WAV directly in the browser. A clean, single-speaker clip of 3–5 seconds works best. Standard v1/v2 also ask for the exact reference transcript; v3 clones directly and v2 Turbo first encodes a speaker embedding. Samples are stored only in a temporary file and deleted immediately after streaming finishes. Streaming WAV output automatically switches between 24 kHz (v1/v2) and 48 kHz (v3).
 
 ```bash
 uv run vieneu-frontend                            # → http://127.0.0.1:8001
 # or: make frontend
 ```
+
+For legacy CPU models, install `uv sync --extra legacy --system-certs`. For GPU models, use `uv sync --group gpu --system-certs`. Starting the frontend alone still uses the minimal torch-free environment and does not download model weights.
 
 #### Available Voices
 
