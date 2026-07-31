@@ -54,7 +54,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 1. **Clone Repo:**
    ```bash
-   git clone https://github.com/pnnbao97/VieNeu-TTS.git
+   git clone https://github.com/pas162/VieNeu-TTS.git
    cd VieNeu-TTS
    ```
 
@@ -166,10 +166,11 @@ for chunk in vieneu.infer_stream("Xin chào các bạn!", voice="Trúc Ly"):
     play(chunk)                                   # np.float32 @ 48 kHz — phát/ghi ngay khi có
 ```
 
-Bản demo **web streaming FastAPI** đầy đủ (player trên trình duyệt, hiện time-to-first-audio, dark mode) nằm ở [`apps/web_stream.py`](apps/web_stream.py):
+Giao diện **VieNeu Studio dùng FastAPI** thân thiện nằm ở [`apps/web_stream.py`](apps/web_stream.py). Frontend mở ngay và **không import hay tải model khi khởi động**. Danh sách giọng được đọc từ metadata có sẵn; model chỉ được tải/khởi tạo sau khi bạn chủ động bấm **Khởi động model** trên giao diện.
 
 ```bash
-uv run python -m apps.web_stream                  # → http://localhost:8001
+uv run vieneu-frontend                            # → http://localhost:8001
+# hoặc: make frontend
 ```
 
 > Engine chia chunk thích ứng (chunk đầu ~320 ms cho độ trễ thấp, rồi phình tới ~2 s khi đã dư lead). Vì RTF < 1 nên lead chỉ tăng dần → player prebuffer ~300 ms là dư, không underrun.
@@ -383,7 +384,7 @@ docker run --gpus all \
 
 ## 🌟 Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=pnnbao97/VieNeu-TTS&type=Date)](https://star-history.com/#pnnbao97/VieNeu-TTS&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=pas162/VieNeu-TTS&type=Date)](https://star-history.com/#pas162/VieNeu-TTS&Date)
 
 ---
 
@@ -391,8 +392,8 @@ docker run --gpus all \
 
 Cảm ơn tất cả những người tuyệt vời đã đóng góp cho dự án này!
 
-<a href="https://github.com/pnnbao97/VieNeu-TTS/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=pnnbao97/VieNeu-TTS" />
+<a href="https://github.com/pas162/VieNeu-TTS/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=pas162/VieNeu-TTS" />
 </a>
 
 ---

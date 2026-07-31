@@ -77,16 +77,18 @@ dependencies = [
     "huggingface_hub",      # fetch ONNX / config / tokenizer / voices
     "PyYAML",               # gradio config.yaml
     "gradio>=5.49.1",       # web UI (vieneu-web)
+    "fastapi>=0.115",       # lazy-loading VieNeu Studio backend
+    "uvicorn>=0.30",        # local VieNeu Studio server
     "perth>=0.2.0",         # optional audio watermark (skipped gracefully if absent)
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/pnnbao97/VieNeu-TTS"
-"Repository" = "https://github.com/pnnbao97/VieNeu-TTS"
-"Bug Tracker" = "https://github.com/pnnbao97/VieNeu-TTS/issues"
-"Documentation" = "https://github.com/pnnbao97/VieNeu-TTS/blob/main/README.md"
-"Source Code" = "https://github.com/pnnbao97/VieNeu-TTS"
-"Changelog" = "https://github.com/pnnbao97/VieNeu-TTS/releases"
+"Homepage" = "https://github.com/pas162/VieNeu-TTS"
+"Repository" = "https://github.com/pas162/VieNeu-TTS"
+"Bug Tracker" = "https://github.com/pas162/VieNeu-TTS/issues"
+"Documentation" = "https://github.com/pas162/VieNeu-TTS/blob/main/README.md"
+"Source Code" = "https://github.com/pas162/VieNeu-TTS"
+"Changelog" = "https://github.com/pas162/VieNeu-TTS/releases"
 
 [project.optional-dependencies]
 legacy = [
@@ -140,6 +142,7 @@ pythonpath = ["src"]
 [project.scripts]
 vieneu-web = "apps.gradio_main:main"
 vieneu-stream = "apps.web_stream:main"
+vieneu-frontend = "apps.web_stream:main"
 
 [tool.setuptools]
 package-dir = {"" = "src", "apps" = "apps", "examples" = "examples"}

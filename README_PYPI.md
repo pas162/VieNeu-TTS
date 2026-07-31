@@ -136,7 +136,7 @@ wav, sr = vieneu.denoise("noisy.wav", out_path="clean.wav")
 ---
 
 ## 🤝 Support & Links
-- **GitHub:** [pnnbao97/VieNeu-TTS](https://github.com/pnnbao97/VieNeu-TTS)
+- **GitHub:** [pas162/VieNeu-TTS](https://github.com/pas162/VieNeu-TTS)
 - **Discord:** [Join our community](https://discord.gg/yJt8kzjzWZ)
 
 **Made with ❤️ for the Vietnamese TTS community**

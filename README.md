@@ -67,7 +67,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 1. **Clone the Repo:**
    ```bash
-   git clone https://github.com/pnnbao97/VieNeu-TTS.git
+   git clone https://github.com/pas162/VieNeu-TTS.git
    cd VieNeu-TTS
    ```
 
@@ -187,10 +187,11 @@ for chunk in vieneu.infer_stream("Xin chào các bạn!", voice="Minh Đức"):
     play(chunk)                                   # np.float32 @ 48 kHz — play/write as it arrives
 ```
 
-A complete **FastAPI web streaming demo** is in [`apps/web_stream.py`](apps/web_stream.py):
+A friendly **FastAPI streaming studio** is available in [`apps/web_stream.py`](apps/web_stream.py). The frontend starts instantly and **does not import or download a model at startup**. Voice metadata is bundled locally; the model is downloaded/initialized only after you explicitly click **Start model** in the UI.
 
 ```bash
-uv run python -m apps.web_stream                  # → http://127.0.0.1:8001
+uv run vieneu-frontend                            # → http://127.0.0.1:8001
+# or: make frontend
 ```
 
 #### Available Voices
@@ -414,13 +415,7 @@ docker run --gpus all \
 
 ## 🌟 Star History
 
-<a href="https://www.star-history.com/?repos=pnnbao97%2FVieNeu-TTS&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=pnnbao97/VieNeu-TTS&type=date&theme=dark&legend=top-left&sealed_token=_tsrXAlf4KfIavj2geHlH_hTI3Vt6YrjXHEaMwuo0iSbNTryaItVoXiSBw4rkyhZkoiSWWW0hopsrddCfpPZciHd5LO53sX8MaFFCcmE6fQC75nhf9wzR61_wpp7cFSxvW9jvlsUOfK4XLSVhPY_ZhKMdqJXboryhvjYulUuawE5jGkAUjQRSFKKl8GK" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=pnnbao97/VieNeu-TTS&type=date&legend=top-left&sealed_token=_tsrXAlf4KfIavj2geHlH_hTI3Vt6YrjXHEaMwuo0iSbNTryaItVoXiSBw4rkyhZkoiSWWW0hopsrddCfpPZciHd5LO53sX8MaFFCcmE6fQC75nhf9wzR61_wpp7cFSxvW9jvlsUOfK4XLSVhPY_ZhKMdqJXboryhvjYulUuawE5jGkAUjQRSFKKl8GK" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=pnnbao97/VieNeu-TTS&type=date&legend=top-left&sealed_token=_tsrXAlf4KfIavj2geHlH_hTI3Vt6YrjXHEaMwuo0iSbNTryaItVoXiSBw4rkyhZkoiSWWW0hopsrddCfpPZciHd5LO53sX8MaFFCcmE6fQC75nhf9wzR61_wpp7cFSxvW9jvlsUOfK4XLSVhPY_ZhKMdqJXboryhvjYulUuawE5jGkAUjQRSFKKl8GK" />
- </picture>
-</a>
+[![Star History Chart](https://api.star-history.com/svg?repos=pas162/VieNeu-TTS&type=Date)](https://star-history.com/#pas162/VieNeu-TTS&Date)
 
 ---
 
@@ -428,8 +423,8 @@ docker run --gpus all \
 
 Thanks to all the amazing people who have contributed to this project!
 
-<a href="https://github.com/pnnbao97/VieNeu-TTS/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=pnnbao97/VieNeu-TTS" />
+<a href="https://github.com/pas162/VieNeu-TTS/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=pas162/VieNeu-TTS" />
 </a>
 
 ---

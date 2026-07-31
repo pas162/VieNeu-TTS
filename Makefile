@@ -1,13 +1,14 @@
 SHELL := /bin/bash
 
-.PHONY: help setup-gpu setup-cpu demo docker-gpu check clean
+.PHONY: help setup-gpu setup-cpu demo frontend stream docker-gpu check clean
 
 help:
 	@echo "Targets:"
 	@echo "  make check       - check toolchain (python>=3.12, uv, espeak, docker, gpu, .env...)"
 	@echo "  make setup      - setup environment (uv sync)"
 	@echo "  make run        - run Gradio UI (alias for 'make demo')"
-	@echo "  make stream     - run Web Stream UI (CPU GGUF)"
+	@echo "  make frontend   - run friendly lazy-loading frontend (no model download on startup)"
+	@echo "  make stream     - alias for 'make frontend'"
 	@echo "  make docker-gpu - run docker compose --profile gpu (auto-create .env if needed)"
 	@echo "  make clean       - clean artifacts (.venv, cache, ...)"
 	@echo "  make uv          - install uv (standalone)"
@@ -117,8 +118,10 @@ demo:
 
 run: demo
 
-stream:
-	uv run vieneu-stream
+frontend:
+	uv run vieneu-frontend
+
+stream: frontend
 
 # --- Docker (auto-create .env if missing) ---
 docker-gpu:

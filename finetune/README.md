@@ -7,7 +7,7 @@ Thư mục này chứa toàn bộ công cụ cần thiết để bạn huấn lu
 Nếu bạn chưa có sẵn mã nguồn, hãy thực hiện cài đặt môi trường:
 
 ```bash
-git clone https://github.com/pnnbao97/VieNeu-TTS.git
+git clone https://github.com/pas162/VieNeu-TTS.git
 cd VieNeu-TTS
 uv sync
 ```

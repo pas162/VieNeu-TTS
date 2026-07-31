@@ -1,167 +1,640 @@
-
 <!doctype html>
 <html lang="vi">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VieNeu v3 Turbo (int8) — CPU Streaming</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐆</text></svg>">
-<style>
-:root{
-  --bg:#f6f7fb; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e5e9f0;
-  --accent:#10b981; --accent2:#0ea5e9; --accent-ink:#ffffff; --field:#f8fafc; --shadow:0 12px 40px rgba(15,23,42,.10);
-}
-@media (prefers-color-scheme:dark){:root{
-  --bg:#0b1220; --card:#111a2e; --ink:#e7edf7; --muted:#93a1b8; --line:#22304d;
-  --accent:#10b981; --accent2:#38bdf8; --field:#0e1830; --shadow:0 12px 44px rgba(0,0,0,.45);
-}}
-*{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:
-  radial-gradient(1200px 600px at 15% -10%, color-mix(in srgb,var(--accent) 16%, transparent), transparent 60%),
-  radial-gradient(1000px 500px at 110% 10%, color-mix(in srgb,var(--accent2) 14%, transparent), transparent 55%),
-  var(--bg);
-  color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  display:flex;align-items:flex-start;justify-content:center;padding:40px 16px}
-.wrap{width:100%;max-width:640px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:28px 26px}
-.brand{display:flex;align-items:center;gap:12px;margin-bottom:4px}
-.logo{font-size:30px;filter:drop-shadow(0 2px 6px rgba(16,185,129,.35))}
-h1{font-size:20px;margin:0;letter-spacing:-.02em}
-.sub{color:var(--muted);font-size:13px;margin:2px 0 22px}
-.badges{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 22px}
-.badge{font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;
-  background:color-mix(in srgb,var(--accent) 14%, transparent);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%, transparent)}
-.badge.b2{background:color-mix(in srgb,var(--accent2) 14%, transparent);color:var(--accent2);border-color:color-mix(in srgb,var(--accent2) 30%, transparent)}
-label{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin:0 0 7px;text-transform:uppercase;letter-spacing:.04em}
-select,textarea{width:100%;background:var(--field);color:var(--ink);border:1px solid var(--line);
-  border-radius:12px;padding:12px 13px;font:inherit;outline:none;transition:border-color .15s,box-shadow .15s}
-select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%, transparent)}
-textarea{resize:none;overflow-y:auto;min-height:104px;max-height:340px}
-.row{margin-bottom:18px}
-.count{float:right;font-size:11px;color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0}
-.btn{width:100%;border:0;border-radius:13px;padding:14px;font:600 16px/1 system-ui;cursor:pointer;color:var(--accent-ink);
-  background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 8px 22px color-mix(in srgb,var(--accent) 40%, transparent);
-  display:flex;align-items:center;justify-content:center;gap:9px;transition:transform .08s,filter .15s}
-.btn:hover{filter:brightness(1.06)} .btn:active{transform:translateY(1px)}
-.btn:disabled{filter:grayscale(.4) brightness(.85);cursor:not-allowed;box-shadow:none}
-.spin{width:16px;height:16px;border:2.5px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:none}
-@keyframes sp{to{transform:rotate(360deg)}}
-.status{display:flex;align-items:center;gap:10px;margin-top:16px;min-height:22px;font-size:13.5px;color:var(--muted)}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
-.dot.gen{background:#f59e0b;animation:pulse 1s infinite} .dot.play{background:var(--accent)} .dot.err{background:#ef4444}
-@keyframes pulse{50%{opacity:.35}}
-.ttfa{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:700;color:var(--accent)}
-audio{width:100%;margin-top:16px;border-radius:12px}
-.foot{text-align:center;color:var(--muted);font-size:11.5px;margin-top:18px}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="VieNeu Studio — biến văn bản tiếng Việt thành giọng nói tự nhiên.">
+  <title>VieNeu Studio · Text to Speech tiếng Việt</title>
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #f4f3ed;
+      --canvas-soft: #ebeae2;
+      --surface: #fffefa;
+      --surface-raised: #ffffff;
+      --ink: #171c19;
+      --muted: #68706a;
+      --quiet: #929992;
+      --line: #ddded6;
+      --line-strong: #c8cbc2;
+      --forest: #185c43;
+      --forest-strong: #104632;
+      --forest-soft: #e2efe8;
+      --mint: #bfe3d1;
+      --coral: #e46f51;
+      --coral-soft: #fbe9e2;
+      --amber: #c38318;
+      --amber-soft: #f8edd7;
+      --danger: #b9443a;
+      --danger-soft: #fae8e5;
+      --shadow: 0 18px 50px rgba(37, 45, 39, .08);
+      --shadow-soft: 0 7px 24px rgba(37, 45, 39, .06);
+      --radius-lg: 28px;
+      --radius-md: 18px;
+      --radius-sm: 12px;
+    }
+
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --canvas: #111713;
+      --canvas-soft: #171e19;
+      --surface: #19211c;
+      --surface-raised: #202a23;
+      --ink: #f2f5f1;
+      --muted: #a9b2aa;
+      --quiet: #7c897f;
+      --line: #303c33;
+      --line-strong: #425044;
+      --forest: #76cba5;
+      --forest-strong: #a1e1c3;
+      --forest-soft: #203c30;
+      --mint: #386750;
+      --coral: #f38d70;
+      --coral-soft: #442b25;
+      --amber: #efbb5f;
+      --amber-soft: #41351f;
+      --danger: #ff988d;
+      --danger-soft: #422825;
+      --shadow: 0 20px 60px rgba(0, 0, 0, .22);
+      --shadow-soft: 0 8px 28px rgba(0, 0, 0, .17);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(circle at 6% 8%, color-mix(in srgb, var(--mint) 34%, transparent) 0 160px, transparent 360px),
+        radial-gradient(circle at 94% 22%, color-mix(in srgb, var(--coral) 9%, transparent) 0 120px, transparent 330px),
+        var(--canvas);
+      color: var(--ink);
+      font: 15px/1.55 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, textarea, select { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, a:focus-visible, textarea:focus-visible, select:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--forest) 28%, transparent);
+      outline-offset: 2px;
+    }
+
+    .shell { width: min(1180px, calc(100% - 40px)); margin: 0 auto; padding-bottom: 54px; }
+    .topbar { height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .brand { display: inline-flex; align-items: center; gap: 11px; color: var(--ink); text-decoration: none; }
+    .brand-mark {
+      width: 40px; height: 40px; display: grid; place-items: center; border-radius: 13px;
+      background: var(--forest); color: var(--surface); box-shadow: 0 7px 18px color-mix(in srgb, var(--forest) 25%, transparent);
+    }
+    .brand-mark svg { width: 22px; height: 22px; }
+    .brand-name { font-size: 17px; font-weight: 760; letter-spacing: -.025em; }
+    .brand-name span { color: var(--forest); }
+    .top-actions { display: flex; align-items: center; gap: 8px; }
+    .icon-btn, .github-link {
+      height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--surface) 82%, transparent);
+      color: var(--muted); text-decoration: none; cursor: pointer; transition: .18s ease;
+    }
+    .icon-btn { width: 40px; padding: 0; }
+    .github-link { padding: 0 13px; font-size: 13px; font-weight: 650; }
+    .icon-btn:hover, .github-link:hover { color: var(--ink); border-color: var(--line-strong); transform: translateY(-1px); }
+    .icon-btn svg, .github-link svg { width: 18px; height: 18px; }
+
+    .hero { padding: 38px 0 34px; text-align: center; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px; padding: 7px 11px;
+      border: 1px solid color-mix(in srgb, var(--forest) 20%, var(--line)); border-radius: 999px;
+      background: color-mix(in srgb, var(--forest-soft) 68%, transparent); color: var(--forest);
+      font-size: 12px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase;
+    }
+    .eyebrow i { width: 7px; height: 7px; border-radius: 50%; background: var(--forest); box-shadow: 0 0 0 5px color-mix(in srgb, var(--forest) 11%, transparent); }
+    h1 { max-width: 780px; margin: 0 auto; font-size: clamp(35px, 5vw, 58px); line-height: 1.06; letter-spacing: -.05em; font-weight: 790; }
+    h1 em { color: var(--coral); font-style: normal; }
+    .hero p { max-width: 610px; margin: 18px auto 0; color: var(--muted); font-size: clamp(15px, 2vw, 18px); }
+
+    .model-strip {
+      display: flex; align-items: center; gap: 14px; margin-bottom: 18px; padding: 14px 16px;
+      border: 1px solid var(--line); border-radius: var(--radius-md); background: color-mix(in srgb, var(--surface) 90%, transparent);
+      box-shadow: var(--shadow-soft);
+    }
+    .status-icon { width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 12px; background: var(--amber-soft); color: var(--amber); }
+    .status-icon svg { width: 19px; height: 19px; }
+    .model-copy { min-width: 0; flex: 1; }
+    .model-copy strong { display: block; font-size: 14px; }
+    .model-copy span { display: block; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .status-chip { display: inline-flex; align-items: center; gap: 7px; margin-left: auto; padding: 7px 10px; border-radius: 999px; background: var(--amber-soft); color: var(--amber); font-size: 12px; font-weight: 740; white-space: nowrap; }
+    .status-chip .pulse { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .status-chip.loading .pulse { animation: pulse 1.15s ease-in-out infinite; }
+    .status-chip.ready { background: var(--forest-soft); color: var(--forest); }
+    .status-chip.error { background: var(--danger-soft); color: var(--danger); }
+    .model-action { min-width: 145px; }
+
+    .workspace { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(290px, .8fr); gap: 18px; align-items: start; }
+    .panel { border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow); }
+    .editor { padding: clamp(20px, 3vw, 30px); }
+    .side { padding: 22px; position: sticky; top: 18px; }
+    .section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .section-heading h2 { margin: 0; font-size: 18px; line-height: 1.25; letter-spacing: -.025em; }
+    .section-heading p { margin: 5px 0 0; color: var(--muted); font-size: 13px; }
+    .counter { padding: 5px 9px; border-radius: 999px; background: var(--canvas-soft); color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+    .textarea-wrap { position: relative; }
+    textarea {
+      width: 100%; min-height: 250px; resize: vertical; padding: 18px 18px 52px; border: 1px solid var(--line);
+      border-radius: var(--radius-md); background: var(--surface-raised); color: var(--ink); font-size: 17px; line-height: 1.65;
+      transition: border-color .18s, box-shadow .18s;
+    }
+    textarea::placeholder { color: var(--quiet); }
+    textarea:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 4px color-mix(in srgb, var(--forest) 10%, transparent); }
+    .text-tools { position: absolute; right: 11px; bottom: 11px; display: flex; gap: 6px; }
+    .mini-btn { border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--muted); padding: 6px 9px; cursor: pointer; font-size: 12px; font-weight: 650; }
+    .mini-btn:hover { color: var(--ink); border-color: var(--line-strong); }
+    .suggestions { display: flex; gap: 8px; margin-top: 12px; overflow-x: auto; scrollbar-width: none; }
+    .suggestions::-webkit-scrollbar { display: none; }
+    .suggestion { flex: 0 0 auto; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); padding: 7px 11px; cursor: pointer; font-size: 12px; transition: .15s; }
+    .suggestion:hover { border-color: color-mix(in srgb, var(--forest) 45%, var(--line)); color: var(--forest); background: var(--forest-soft); }
+
+    .generate-row { display: flex; align-items: center; gap: 12px; margin-top: 22px; }
+    .primary-btn, .secondary-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 9px; border-radius: 13px;
+      min-height: 46px; padding: 0 17px; cursor: pointer; font-weight: 720; border: 0; transition: .17s ease;
+    }
+    .primary-btn { flex: 1; background: var(--forest); color: #fff; box-shadow: 0 8px 22px color-mix(in srgb, var(--forest) 25%, transparent); }
+    .primary-btn:hover:not(:disabled) { background: var(--forest-strong); transform: translateY(-1px); }
+    .primary-btn:disabled { opacity: .48; cursor: not-allowed; box-shadow: none; }
+    .primary-btn svg, .secondary-btn svg { width: 18px; height: 18px; }
+    .secondary-btn { background: var(--surface-raised); color: var(--ink); border: 1px solid var(--line); }
+    .secondary-btn:hover:not(:disabled) { border-color: var(--line-strong); transform: translateY(-1px); }
+    .secondary-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .shortcut { color: var(--quiet); font-size: 11px; white-space: nowrap; }
+
+    .field { margin-bottom: 20px; }
+    .field label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 12px; font-weight: 720; letter-spacing: .02em; }
+    select { width: 100%; height: 46px; padding: 0 38px 0 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); color: var(--ink); cursor: pointer; }
+    select:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 4px color-mix(in srgb, var(--forest) 10%, transparent); }
+    .voice-preview { display: flex; align-items: center; gap: 11px; margin-top: 11px; padding: 11px; border-radius: 12px; background: var(--canvas-soft); }
+    .avatar { width: 38px; height: 38px; display: grid; place-items: center; flex: none; border-radius: 50%; background: var(--mint); color: var(--forest-strong); font-weight: 780; }
+    .voice-preview strong { display: block; font-size: 13px; }
+    .voice-preview span { display: block; margin-top: 2px; color: var(--muted); font-size: 11.5px; }
+    .divider { height: 1px; margin: 22px 0; background: var(--line); }
+    .feature-list { display: grid; gap: 12px; }
+    .feature { display: flex; gap: 10px; color: var(--muted); font-size: 12.5px; }
+    .feature svg { width: 17px; height: 17px; flex: none; color: var(--forest); margin-top: 1px; }
+    .feature strong { color: var(--ink); font-weight: 690; }
+
+    .result { display: none; margin-top: 18px; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-raised); }
+    .result.show { display: block; animation: rise .25s ease both; }
+    .result-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .visualizer { height: 34px; display: flex; align-items: center; gap: 3px; }
+    .visualizer i { width: 3px; height: var(--h); border-radius: 3px; background: var(--forest); opacity: .65; }
+    .visualizer.playing i { animation: wave .75s ease-in-out infinite alternate; animation-delay: calc(var(--n) * -70ms); }
+    .result-copy { flex: 1; }
+    .result-copy strong { display: block; font-size: 13px; }
+    .result-copy span { color: var(--muted); font-size: 11.5px; }
+    .metric { padding: 5px 8px; border-radius: 8px; background: var(--forest-soft); color: var(--forest); font-size: 11px; font-weight: 740; }
+    audio { display: none; width: 100%; height: 40px; margin-top: 12px; }
+    audio.ready { display: block; }
+    .result-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+    .download-link { color: var(--forest); font-size: 12px; font-weight: 700; text-decoration: none; }
+    .download-link:hover { text-decoration: underline; }
+
+    .toast {
+      position: fixed; left: 50%; bottom: 24px; z-index: 10; max-width: min(440px, calc(100% - 30px));
+      transform: translate(-50%, 22px); padding: 11px 15px; border: 1px solid var(--line); border-radius: 12px;
+      background: var(--surface-raised); color: var(--ink); box-shadow: var(--shadow); opacity: 0; pointer-events: none;
+      transition: opacity .2s, transform .2s; font-size: 13px;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast.error { border-color: color-mix(in srgb, var(--danger) 35%, var(--line)); color: var(--danger); }
+    .spinner { width: 17px; height: 17px; border: 2px solid rgba(255,255,255,.36); border-top-color: currentColor; border-radius: 50%; animation: spin .7s linear infinite; }
+    footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 24px; padding: 0 4px; color: var(--quiet); font-size: 11.5px; }
+    footer a { color: var(--muted); text-decoration: none; }
+    footer a:hover { color: var(--forest); }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 50% { opacity: .28; transform: scale(.82); } }
+    @keyframes rise { from { opacity: 0; transform: translateY(7px); } }
+    @keyframes wave { to { height: 7px; opacity: .3; } }
+
+    @media (max-width: 800px) {
+      .shell { width: min(100% - 24px, 660px); }
+      .workspace { grid-template-columns: 1fr; }
+      .side { position: static; order: -1; }
+      .hero { padding-top: 22px; }
+      .model-strip { flex-wrap: wrap; }
+      .model-action { width: 100%; }
+      .model-action .secondary-btn { width: 100%; }
+      .status-chip { margin-left: 0; }
+    }
+    @media (max-width: 520px) {
+      .shell { width: min(100% - 16px, 500px); }
+      .topbar { height: 68px; }
+      .github-link span, .shortcut { display: none; }
+      .github-link { width: 40px; padding: 0; }
+      .hero { padding: 22px 8px 28px; }
+      .panel { border-radius: 21px; }
+      .editor, .side { padding: 18px; }
+      textarea { min-height: 220px; font-size: 16px; }
+      .model-copy span { max-width: 210px; }
+      .generate-row { flex-wrap: wrap; }
+      .primary-btn { width: 100%; flex-basis: 100%; }
+      footer { flex-direction: column; align-items: flex-start; gap: 5px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
 </head>
 <body>
-<div class="wrap"><div class="card">
-  <div class="brand"><span class="logo">🐆</span><h1>VieNeu-TTS v3 Turbo</h1></div>
-  <div class="sub">Text-to-Speech tiếng Việt · streaming thời gian thực trên CPU</div>
-  <div class="badges">
-    <span class="badge">⚡ backbone INT8</span>
-    <span class="badge b2">🔊 48 kHz</span>
-    <span class="badge">🖥️ CPU · không cần GPU</span>
-  </div>
-  <div class="row">
-    <label for="voice">Giọng đọc</label>
-    <select id="voice"><option>Đang tải…</option></select>
-  </div>
-  <div class="row">
-    <label for="text">Nội dung <span class="count" id="cnt">0</span></label>
-    <textarea id="text" placeholder="Nhập văn bản tiếng Việt…">Xin chào các bạn, đây là bản stream thời gian thực chạy trên CPU bằng backbone int8. Nghe thử xem có mượt và tự nhiên không nhé!</textarea>
-  </div>
-  <button class="btn" id="btn" onclick="go()"><span class="spin" id="spin"></span><span id="btxt">▶ Đọc (Stream)</span></button>
-  <div class="status"><span class="dot" id="dot"></span><span id="st">Sẵn sàng</span><span class="ttfa" id="ttfa"></span></div>
-  <audio id="au" controls></audio>
-  <div class="foot">VieNeu-TTS · <code>pip install vieneu</code> · int8 mặc định trên CPU</div>
-</div></div>
-<script>
-const $=id=>document.getElementById(id);
-const txt=$('text'),cnt=$('cnt'),btn=$('btn'),spin=$('spin'),btxt=$('btxt'),dot=$('dot'),st=$('st'),ttfa=$('ttfa'),au=$('au');
-const grow=()=>{txt.style.height='auto';txt.style.height=Math.min(txt.scrollHeight,340)+'px';};
-txt.addEventListener('input',()=>{cnt.textContent=txt.value.length;grow();}); cnt.textContent=txt.value.length; grow();
-fetch('/voices').then(r=>r.json()).then(v=>{const s=$('voice');s.innerHTML='';
-  v.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=x.name;s.add(o);});})
-  .catch(e=>{setStatus('err','Lỗi tải giọng: '+e);});
-function setStatus(kind,msg){dot.className='dot'+(kind?' '+kind:'');st.textContent=msg;}
-function busy(on){btn.disabled=on;spin.style.display=on?'block':'none';btxt.textContent=on?'Đang tạo…':'▶ Đọc (Stream)';}
-let t0=0,got=false;
-const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-const audioCtx = new AudioContextClass();
-let playHead = audioCtx.currentTime + 0.1;
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="VieNeu Studio">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg>
+        </span>
+        <span class="brand-name">VieNeu <span>Studio</span></span>
+      </a>
+      <div class="top-actions">
+        <a class="github-link" href="https://github.com/pas162/VieNeu-TTS" target="_blank" rel="noreferrer" aria-label="Mở GitHub">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .7a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2.23c-3.23.7-3.91-1.37-3.91-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.78 2.72 1.27 3.38.97.1-.75.4-1.27.74-1.56-2.58-.29-5.29-1.29-5.29-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.16 1.18a10.97 10.97 0 0 1 5.76 0c2.2-1.49 3.16-1.18 3.16-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.72 5.38-5.31 5.67.42.36.79 1.07.79 2.16v3.2c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .7Z"/></svg>
+          <span>GitHub</span>
+        </a>
+        <button class="icon-btn" id="themeBtn" type="button" aria-label="Đổi giao diện sáng tối" title="Đổi giao diện">
+          <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 1 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        </button>
+      </div>
+    </header>
 
-async function streamViaFetch(text, voice){
-  const url = '/stream?text='+encodeURIComponent(text)+'&voice_id='+encodeURIComponent(voice);
-  let resp;
-  try{
-    resp = await fetch(url);
-  }catch(e){ busy(false); setStatus('err','Fetch failed: '+e); return; }
-  if(!resp.ok){ busy(false); setStatus('err','HTTP '+resp.status); return; }
-  const reader = resp.body && resp.body.getReader();
-  if(!reader){ busy(false); setStatus('err','Streaming not supported'); return; }
-  const SAMPLE_RATE = 48000;
-  let headerConsumed = false;
-  let leftover = new Uint8Array(0);
-  t0 = performance.now();
-  try{
-    while(true){
-      const {done, value} = await reader.read();
-      if(done) break;
-      // prepend any bytes carried over from the previous read
-      let combined = value;
-      if(leftover.length){
-        combined = new Uint8Array(leftover.length + value.length);
-        combined.set(leftover, 0);
-        combined.set(value, leftover.length);
-        leftover = new Uint8Array(0);
-      }
-      if(!headerConsumed){
-        // accumulate until we have the full 44-byte WAV header
-        if(combined.length < 44){ leftover = combined; continue; }
-        combined = combined.slice(44);   // strip header, keep remaining data
-        headerConsumed = true;
-      }
-      // only decode whole PCM16 samples; carry the odd trailing byte forward
-      const usable = combined.length - (combined.length % 2);
-      if(usable < combined.length){ leftover = combined.slice(usable); }
-      if(usable > 0){
-        processPCM(combined.subarray(0, usable), SAMPLE_RATE);
-        if(!got){ got = true; const ms = Math.round(performance.now()-t0); ttfa.textContent='⚡ '+ms+' ms'; busy(false); setStatus('play','Đang phát'); }
+    <main>
+      <section class="hero">
+        <div class="eyebrow"><i></i> AI giọng Việt chạy trên thiết bị</div>
+        <h1>Biến câu chữ thành giọng nói <em>có cảm xúc.</em></h1>
+        <p>Soạn nội dung, chọn chất giọng và nghe ngay khi âm thanh đang được tạo — riêng tư, tự nhiên và không cần GPU.</p>
+      </section>
+
+      <section class="model-strip" id="modelStrip" aria-live="polite">
+        <div class="status-icon" id="statusIcon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        </div>
+        <div class="model-copy">
+          <strong id="modelTitle">Model đang nghỉ</strong>
+          <span id="modelDescription">Giao diện đã sẵn sàng; chưa có model nào được tải xuống.</span>
+        </div>
+        <span class="status-chip" id="statusChip"><i class="pulse"></i><span>Chưa khởi động</span></span>
+        <div class="model-action">
+          <button class="secondary-btn" id="loadBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
+            <span>Khởi động model</span>
+          </button>
+        </div>
+      </section>
+
+      <div class="workspace">
+        <section class="panel editor">
+          <div class="section-heading">
+            <div><h2>Nội dung cần đọc</h2><p>Viết tự nhiên và dùng dấu câu để tạo nhịp nghỉ.</p></div>
+            <span class="counter"><b id="charCount">0</b> / 5.000</span>
+          </div>
+          <div class="textarea-wrap">
+            <textarea id="textInput" maxlength="5000" spellcheck="true" placeholder="Hôm nay bạn muốn biến điều gì thành giọng nói?">Xin chào! Đây là VieNeu Studio, nơi câu chữ tiếng Việt được cất lên bằng một giọng nói tự nhiên và giàu cảm xúc.</textarea>
+            <div class="text-tools">
+              <button class="mini-btn" id="pasteBtn" type="button">Dán</button>
+              <button class="mini-btn" id="clearBtn" type="button">Xóa</button>
+            </div>
+          </div>
+          <div class="suggestions" aria-label="Nội dung mẫu">
+            <button class="suggestion" type="button" data-sample="intro">👋 Lời chào</button>
+            <button class="suggestion" type="button" data-sample="news">📰 Bản tin</button>
+            <button class="suggestion" type="button" data-sample="story">📖 Kể chuyện</button>
+            <button class="suggestion" type="button" data-sample="assistant">✨ Trợ lý ảo</button>
+          </div>
+
+          <div class="generate-row">
+            <button class="primary-btn" id="generateBtn" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              <span>Tạo và nghe ngay</span>
+            </button>
+            <button class="secondary-btn" id="stopBtn" type="button" disabled aria-label="Dừng tạo âm thanh">
+              <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+              <span>Dừng</span>
+            </button>
+            <span class="shortcut">Ctrl + Enter</span>
+          </div>
+
+          <div class="result" id="resultPanel" aria-live="polite">
+            <div class="result-head">
+              <div class="visualizer" id="visualizer" aria-hidden="true">
+                <i style="--h:10px;--n:1"></i><i style="--h:21px;--n:2"></i><i style="--h:14px;--n:3"></i><i style="--h:29px;--n:4"></i><i style="--h:18px;--n:5"></i><i style="--h:25px;--n:6"></i><i style="--h:12px;--n:7"></i><i style="--h:22px;--n:8"></i>
+              </div>
+              <div class="result-copy"><strong id="resultTitle">Đang tạo giọng nói…</strong><span id="resultDetail">Audio sẽ phát ngay khi có dữ liệu đầu tiên.</span></div>
+              <span class="metric" id="ttfaMetric">Đang chờ</span>
+            </div>
+            <audio id="audioPlayer" controls preload="metadata"></audio>
+            <div class="result-actions"><a class="download-link" id="downloadLink" href="#" download="vieneu-studio.wav" hidden>Tải file WAV ↓</a></div>
+          </div>
+        </section>
+
+        <aside class="panel side">
+          <div class="section-heading"><div><h2>Chọn giọng đọc</h2><p>14 giọng Việt được tuyển chọn.</p></div></div>
+          <div class="field">
+            <label for="voiceSelect">Giọng nói</label>
+            <select id="voiceSelect" disabled><option>Đang đọc danh sách giọng…</option></select>
+            <div class="voice-preview">
+              <div class="avatar" id="voiceAvatar">V</div>
+              <div><strong id="voiceName">Chưa chọn giọng</strong><span id="voiceDescription">Danh sách được lưu sẵn trong ứng dụng.</span></div>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="feature-list">
+            <div class="feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m20 6-11 11-5-5"/></svg>
+              <div><strong>Khởi động nhẹ</strong><br>Frontend mở mà không tải model.</div>
+            </div>
+            <div class="feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14a8 8 0 0 1 16 0M6 18h.01M10 18h.01M14 18h.01M18 18h.01"/></svg>
+              <div><strong>Streaming 48 kHz</strong><br>Nghe ngay, không cần đợi tạo xong.</div>
+            </div>
+            <div class="feature">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+              <div><strong>Chạy cục bộ</strong><br>Văn bản không rời khỏi máy của bạn.</div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+
+    <footer>
+      <span>VieNeu Studio · VieNeu-TTS v3 Turbo · CPU INT8</span>
+      <span>Mã nguồn bởi <a href="https://github.com/pas162" target="_blank" rel="noreferrer">@pas162</a></span>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const elements = {
+      themeBtn: $('themeBtn'), text: $('textInput'), charCount: $('charCount'), paste: $('pasteBtn'), clear: $('clearBtn'),
+      load: $('loadBtn'), generate: $('generateBtn'), stop: $('stopBtn'), voice: $('voiceSelect'),
+      modelTitle: $('modelTitle'), modelDescription: $('modelDescription'), statusChip: $('statusChip'), statusIcon: $('statusIcon'),
+      result: $('resultPanel'), resultTitle: $('resultTitle'), resultDetail: $('resultDetail'), visualizer: $('visualizer'),
+      metric: $('ttfaMetric'), player: $('audioPlayer'), download: $('downloadLink'), toast: $('toast'),
+      voiceName: $('voiceName'), voiceDescription: $('voiceDescription'), voiceAvatar: $('voiceAvatar')
+    };
+
+    const samples = {
+      intro: 'Xin chào! Rất vui được đồng hành cùng bạn. Hôm nay chúng ta sẽ cùng khám phá một cách hoàn toàn mới để biến câu chữ thành giọng nói.',
+      news: 'Bản tin sáng nay: thời tiết tại Thành phố Hồ Chí Minh dịu mát, trời quang và có nắng nhẹ. Nhiệt độ dự kiến dao động từ hai mươi sáu đến ba mươi hai độ C.',
+      story: 'Ngày xửa ngày xưa, bên một dòng sông xanh trong, có một ngôi làng nhỏ luôn rộn ràng tiếng cười. Ở đó, mỗi buổi chiều đều bắt đầu bằng một câu chuyện kỳ diệu.',
+      assistant: 'Chào buổi sáng! Lịch của bạn hôm nay có hai cuộc họp. Cuộc họp đầu tiên bắt đầu lúc chín giờ, và bạn còn mười lăm phút để chuẩn bị.'
+    };
+
+    let voices = [];
+    let modelState = 'idle';
+    let pollTimer = null;
+    let abortController = null;
+    let audioContext = null;
+    let playHead = 0;
+    let activeSources = [];
+    let pcmParts = [];
+    let resultUrl = null;
+    let toastTimer = null;
+
+    function setTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem('vieneu-theme', theme);
+    }
+    const savedTheme = localStorage.getItem('vieneu-theme');
+    setTheme(savedTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+    elements.themeBtn.addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+
+    function notify(message, error = false) {
+      clearTimeout(toastTimer);
+      elements.toast.textContent = message;
+      elements.toast.className = 'toast show' + (error ? ' error' : '');
+      toastTimer = setTimeout(() => { elements.toast.className = 'toast'; }, 3600);
+    }
+
+    function updateCount() { elements.charCount.textContent = elements.text.value.length.toLocaleString('vi-VN'); }
+    elements.text.addEventListener('input', updateCount);
+    updateCount();
+    elements.clear.addEventListener('click', () => { elements.text.value = ''; updateCount(); elements.text.focus(); });
+    elements.paste.addEventListener('click', async () => {
+      try { elements.text.value = await navigator.clipboard.readText(); updateCount(); elements.text.focus(); }
+      catch { notify('Trình duyệt chưa cho phép đọc clipboard.', true); }
+    });
+    document.querySelectorAll('[data-sample]').forEach((button) => button.addEventListener('click', () => {
+      elements.text.value = samples[button.dataset.sample]; updateCount(); elements.text.focus();
+    }));
+
+    function setModelStatus(status) {
+      modelState = status.state || 'idle';
+      elements.statusChip.className = 'status-chip ' + modelState;
+      const chipText = elements.statusChip.querySelector('span');
+      const buttonText = elements.load.querySelector('span');
+      elements.load.disabled = false;
+      elements.generate.disabled = modelState !== 'ready';
+
+      if (modelState === 'ready') {
+        elements.modelTitle.textContent = 'Model đã sẵn sàng';
+        elements.modelDescription.textContent = `${status.model} · ${status.variant} · ${(status.sample_rate / 1000)} kHz`;
+        chipText.textContent = 'Sẵn sàng';
+        buttonText.textContent = 'Giải phóng model';
+        elements.load.dataset.action = 'unload';
+      } else if (modelState === 'loading') {
+        elements.modelTitle.textContent = 'Đang chuẩn bị model…';
+        elements.modelDescription.textContent = 'Lần đầu có thể cần tải dữ liệu. Bạn vẫn có thể soạn nội dung trong lúc chờ.';
+        chipText.textContent = 'Đang tải';
+        buttonText.textContent = 'Đang khởi động…';
+        elements.load.disabled = true;
+        elements.load.dataset.action = 'load';
+      } else if (modelState === 'error') {
+        elements.modelTitle.textContent = 'Không thể khởi động model';
+        elements.modelDescription.textContent = status.error || 'Kiểm tra kết nối rồi thử lại.';
+        chipText.textContent = 'Có lỗi';
+        buttonText.textContent = 'Thử lại';
+        elements.load.dataset.action = 'load';
+      } else {
+        elements.modelTitle.textContent = 'Model đang nghỉ';
+        elements.modelDescription.textContent = 'Giao diện đã sẵn sàng; chưa có model nào được tải xuống.';
+        chipText.textContent = 'Chưa khởi động';
+        buttonText.textContent = 'Khởi động model';
+        elements.load.dataset.action = 'load';
       }
     }
-    setStatus('','Xong');
-  }catch(e){ setStatus('err','Stream error: '+e); }
-}
 
-function processPCM(uint8arr, sampleRate){
-  if(!uint8arr || uint8arr.length === 0) return;
-  // PCM16 LE -> Float32
-  // Use the underlying ArrayBuffer with correct byteOffset/byteLength to create DataView
-  const view = new DataView(uint8arr.buffer, uint8arr.byteOffset, uint8arr.byteLength);
-  const n = Math.floor(uint8arr.byteLength / 2);
-  const float32 = audioCtx.createBuffer(1, n, sampleRate);
-  const ch = float32.getChannelData(0);
-  for(let i=0;i<n;i++){ const val = view.getInt16(i*2, true); ch[i] = Math.max(-1, Math.min(1, val / 32768)); }
-  const src = audioCtx.createBufferSource();
-  src.buffer = float32;
-  src.connect(audioCtx.destination);
-  const startAt = Math.max(playHead, audioCtx.currentTime + 0.05);
-  src.start(startAt);
-  playHead = startAt + float32.duration;
-}
+    async function refreshStatus() {
+      try {
+        const response = await fetch('/api/status', { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const status = await response.json();
+        setModelStatus(status);
+        if (status.state === 'loading') {
+          if (!pollTimer) pollTimer = setInterval(refreshStatus, 1200);
+        } else if (pollTimer) {
+          clearInterval(pollTimer); pollTimer = null;
+          if (status.state === 'ready') notify('Model đã sẵn sàng. Bạn có thể tạo giọng nói!');
+          if (status.state === 'error') notify(status.error || 'Không thể tải model.', true);
+        }
+      } catch (error) {
+        notify(`Không kết nối được backend: ${error.message}`, true);
+      }
+    }
 
-function go(){
-  const t=txt.value.trim(); if(!t)return;
-  const v=$('voice').value;
-  busy(true); got=false; ttfa.textContent=''; setStatus('gen','Đang tạo giọng…');
-  // resume audio context on user gesture
-  audioCtx.resume().then(()=>{
-    playHead = audioCtx.currentTime + 0.1;
-    streamViaFetch(t, v);
-  }).catch(()=>{ streamViaFetch(t, v); });
-}
-</script>
+    elements.load.addEventListener('click', async () => {
+      const unloading = elements.load.dataset.action === 'unload';
+      try {
+        elements.load.disabled = true;
+        const response = await fetch(unloading ? '/api/model/unload' : '/api/model/load', { method: 'POST' });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+        setModelStatus(data);
+        if (!unloading) {
+          notify('Đã bắt đầu khởi động model. Lần đầu có thể mất vài phút.');
+          if (!pollTimer) pollTimer = setInterval(refreshStatus, 1200);
+        } else {
+          notify('Đã giải phóng model khỏi bộ nhớ.');
+        }
+      } catch (error) {
+        elements.load.disabled = false;
+        notify(error.message, true);
+      }
+    });
+
+    function updateVoicePreview() {
+      const selected = voices.find((voice) => voice.id === elements.voice.value);
+      if (!selected) return;
+      elements.voiceName.textContent = selected.name;
+      elements.voiceDescription.textContent = selected.description || [selected.gender, selected.region].filter(Boolean).join(' · ');
+      elements.voiceAvatar.textContent = selected.name.trim().charAt(0).toUpperCase();
+    }
+
+    async function loadVoices() {
+      try {
+        const response = await fetch('/api/voices');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        voices = await response.json();
+        elements.voice.innerHTML = '';
+        voices.forEach((voice) => {
+          const option = document.createElement('option'); option.value = voice.id; option.textContent = voice.name; elements.voice.appendChild(option);
+        });
+        elements.voice.disabled = voices.length === 0;
+        updateVoicePreview();
+      } catch (error) {
+        elements.voice.innerHTML = '<option>Không tải được danh sách</option>';
+        notify(`Lỗi tải danh sách giọng: ${error.message}`, true);
+      }
+    }
+    elements.voice.addEventListener('change', updateVoicePreview);
+
+    function getAudioContext() {
+      if (!audioContext) {
+        const Context = window.AudioContext || window.webkitAudioContext;
+        audioContext = new Context();
+      }
+      return audioContext;
+    }
+
+    function processPcm(bytes, sampleRate) {
+      if (!bytes.byteLength) return;
+      pcmParts.push(new Uint8Array(bytes));
+      const context = getAudioContext();
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      const length = Math.floor(bytes.byteLength / 2);
+      const buffer = context.createBuffer(1, length, sampleRate);
+      const channel = buffer.getChannelData(0);
+      for (let index = 0; index < length; index++) channel[index] = view.getInt16(index * 2, true) / 32768;
+      const source = context.createBufferSource();
+      source.buffer = buffer; source.connect(context.destination);
+      const startAt = Math.max(playHead, context.currentTime + .06);
+      source.start(startAt); playHead = startAt + buffer.duration; activeSources.push(source);
+      source.onended = () => { activeSources = activeSources.filter((item) => item !== source); };
+    }
+
+    function wavBlob(parts, sampleRate) {
+      const size = parts.reduce((sum, part) => sum + part.byteLength, 0);
+      const header = new ArrayBuffer(44); const view = new DataView(header);
+      const write = (offset, value) => [...value].forEach((char, index) => view.setUint8(offset + index, char.charCodeAt(0)));
+      write(0, 'RIFF'); view.setUint32(4, 36 + size, true); write(8, 'WAVE'); write(12, 'fmt ');
+      view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true); view.setUint32(28, sampleRate * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
+      write(36, 'data'); view.setUint32(40, size, true);
+      return new Blob([header, ...parts], { type: 'audio/wav' });
+    }
+
+    function stopAudio(message = 'Đã dừng theo yêu cầu.') {
+      if (abortController) abortController.abort();
+      abortController = null;
+      activeSources.forEach((source) => { try { source.stop(); } catch {} }); activeSources = [];
+      elements.visualizer.classList.remove('playing'); elements.generate.disabled = modelState !== 'ready'; elements.stop.disabled = true;
+      elements.resultTitle.textContent = 'Đã dừng'; elements.resultDetail.textContent = message;
+    }
+    elements.stop.addEventListener('click', () => stopAudio());
+
+    async function generate() {
+      const text = elements.text.value.trim();
+      if (modelState !== 'ready') { notify('Hãy khởi động model trước khi tạo giọng nói.', true); elements.load.focus(); return; }
+      if (!text) { notify('Bạn chưa nhập nội dung cần đọc.', true); elements.text.focus(); return; }
+
+      stopAudio('Đang bắt đầu lượt tạo mới…');
+      abortController = new AbortController(); pcmParts = [];
+      if (resultUrl) { URL.revokeObjectURL(resultUrl); resultUrl = null; }
+      elements.player.classList.remove('ready'); elements.player.removeAttribute('src'); elements.download.hidden = true;
+      elements.result.classList.add('show'); elements.visualizer.classList.add('playing');
+      elements.resultTitle.textContent = 'Đang tạo giọng nói…'; elements.resultDetail.textContent = 'Audio sẽ phát ngay khi có dữ liệu đầu tiên.'; elements.metric.textContent = 'Đang chờ';
+      elements.generate.disabled = true; elements.stop.disabled = false;
+
+      const context = getAudioContext(); await context.resume(); playHead = context.currentTime + .1;
+      const started = performance.now(); let firstAudio = false; let carry = new Uint8Array(0); let headerRead = false;
+
+      try {
+        const response = await fetch('/stream', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: abortController.signal,
+          body: JSON.stringify({ text, voice_id: elements.voice.value || null })
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({})); throw new Error(data.detail || `HTTP ${response.status}`);
+        }
+        if (!response.body) throw new Error('Trình duyệt không hỗ trợ audio streaming.');
+        const reader = response.body.getReader();
+        while (true) {
+          const { done, value } = await reader.read(); if (done) break;
+          let bytes = value;
+          if (carry.byteLength) { const joined = new Uint8Array(carry.byteLength + value.byteLength); joined.set(carry); joined.set(value, carry.byteLength); bytes = joined; carry = new Uint8Array(0); }
+          if (!headerRead) { if (bytes.byteLength < 44) { carry = bytes; continue; } bytes = bytes.slice(44); headerRead = true; }
+          const usable = bytes.byteLength - (bytes.byteLength % 2); if (usable < bytes.byteLength) carry = bytes.slice(usable);
+          if (usable) {
+            processPcm(bytes.subarray(0, usable), 48000);
+            if (!firstAudio) {
+              firstAudio = true; const ttfa = Math.round(performance.now() - started);
+              elements.metric.textContent = `⚡ ${ttfa} ms`; elements.resultTitle.textContent = 'Đang phát trực tiếp'; elements.resultDetail.textContent = 'Âm thanh vẫn đang được tạo ở phía sau.';
+            }
+          }
+        }
+
+        const blob = wavBlob(pcmParts, 48000); resultUrl = URL.createObjectURL(blob);
+        elements.player.src = resultUrl; elements.player.classList.add('ready');
+        elements.download.href = resultUrl; elements.download.hidden = false;
+        elements.visualizer.classList.remove('playing'); elements.resultTitle.textContent = 'Đã tạo xong';
+        elements.resultDetail.textContent = `File WAV 48 kHz · ${(blob.size / 1024 / 1024).toFixed(1)} MB`;
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          elements.visualizer.classList.remove('playing'); elements.resultTitle.textContent = 'Chưa tạo được audio'; elements.resultDetail.textContent = error.message; notify(error.message, true);
+        }
+      } finally {
+        abortController = null; elements.generate.disabled = modelState !== 'ready'; elements.stop.disabled = true;
+      }
+    }
+
+    elements.generate.addEventListener('click', generate);
+    elements.text.addEventListener('keydown', (event) => { if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') { event.preventDefault(); generate(); } });
+    elements.player.addEventListener('play', () => elements.visualizer.classList.add('playing'));
+    elements.player.addEventListener('pause', () => elements.visualizer.classList.remove('playing'));
+    window.addEventListener('beforeunload', () => { if (resultUrl) URL.revokeObjectURL(resultUrl); });
+
+    Promise.all([refreshStatus(), loadVoices()]);
+  </script>
 </body>
 </html>

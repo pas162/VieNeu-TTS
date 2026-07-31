@@ -5,7 +5,7 @@
     "engine": "VieNeu-TTS",
     "author": "Phạm Nguyễn Ngọc Bảo (pnnbao-ump)",
     "license": "CC BY-NC 4.0",
-    "homepage": "https://github.com/pnnbao97/VieNeu-TTS",
+    "homepage": "https://github.com/pas162/VieNeu-TTS",
     "notice": "Model and voices are for non-commercial use only. Mention pnnbao-ump when using."
   },
   "default_voice": "Binh",

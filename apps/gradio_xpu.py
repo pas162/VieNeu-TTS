@@ -610,7 +610,7 @@ with gr.Blocks(theme=theme, css=css, title="VieNeu-TTS (XPU)", head=head_html) a
         </div>
         <div class="model-card-item">
             <strong>Repository:</strong>
-            <a href="https://github.com/pnnbao97/VieNeu-TTS" target="_blank" class="model-card-link">GitHub</a>
+            <a href="https://github.com/pas162/VieNeu-TTS" target="_blank" class="model-card-link">GitHub</a>
         </div>
         <div class="model-card-item">
             <strong>Tác giả:</strong>
@@ -707,7 +707,7 @@ with gr.Blocks(theme=theme, css=css, title="VieNeu-TTS (XPU)", head=head_html) a
                         
                         gr.Markdown("""
                         **💡 Mẹo nhỏ:** Nếu kết quả Zero-shot Voice Cloning chưa như ý, bạn hãy cân nhắc **Finetune (LoRA)** để đạt chất lượng tốt nhất. 
-                        Hướng dẫn chi tiết có tại file: `finetune/README.md` hoặc xem trên [GitHub](https://github.com/pnnbao97/VieNeu-TTS/tree/main/finetune).
+                        Hướng dẫn chi tiết có tại file: `finetune/README.md` hoặc xem trên [GitHub](https://github.com/pas162/VieNeu-TTS/tree/main/finetune).
                         """)              
                 
                 generation_mode = gr.Radio(
