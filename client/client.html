@@ -340,7 +340,7 @@
         <div class="model-action">
           <button class="model-load-btn" id="loadBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
-            <span>Tải &amp; khởi động</span>
+            <span>Khởi động model</span>
           </button>
         </div>
       </section>
@@ -400,18 +400,19 @@
             <div class="field">
               <label for="voiceSelect">Giọng nói</label>
               <select id="voiceSelect" disabled><option>Đang đọc danh sách giọng…</option></select>
-              <div class="voice-preview">
+              <div class="voice-preview" style="display: flex; align-items: center; gap: 10px;">
                 <div class="avatar" id="voiceAvatar">V</div>
-                <div><strong id="voiceName">Chưa chọn giọng</strong><span id="voiceDescription">Danh sách được lưu sẵn trong ứng dụng.</span></div>
+                <div style="flex: 1;"><strong id="voiceName">Chưa chọn giọng</strong><span id="voiceDescription">Danh sách được lưu sẵn trong ứng dụng.</span></div>
+                <button type="button" id="deleteCustomVoiceBtn" hidden style="background: rgba(220, 38, 38, 0.1); color: #dc2626; border: 1px solid rgba(220,38,38,0.2); border-radius: 6px; padding: 4px 8px; font-size: 12px; font-weight: 600; cursor: pointer;">🗑️ Xóa giọng</button>
               </div>
             </div>
           </div>
           <div class="voice-pane" id="clonePane" role="tabpanel">
             <label class="drop-zone" id="dropZone" for="referenceInput" tabindex="0" role="button">
-              <input id="referenceInput" type="file" accept=".wav,.flac,.ogg,.mp3,audio/wav,audio/flac,audio/ogg,audio/mpeg">
+              <input id="referenceInput" type="file" accept=".wav,.flac,.ogg,.mp3,.m4a,.aac,.mp4,audio/wav,audio/flac,audio/ogg,audio/mpeg,audio/m4a,audio/mp4,audio/aac">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 20h14"/></svg>
               <strong>Tải audio giọng mẫu</strong>
-              <span>WAV, FLAC, OGG hoặc MP3 · tối đa 25 MB</span>
+              <span>WAV, FLAC, OGG, MP3 hoặc M4A · tối đa 25 MB</span>
             </label>
             <div class="clone-or">hoặc</div>
             <button class="record-btn" id="recordBtn" type="button"><i class="record-dot"></i><span id="recordLabel">Ghi âm trực tiếp</span><b id="recordTime" hidden>00:00</b></button>
@@ -422,6 +423,10 @@
                 <button class="remove-reference" id="removeReference" type="button" aria-label="Xóa audio mẫu">×</button>
               </div>
               <audio class="reference-audio ready" id="referencePreview" controls preload="metadata"></audio>
+              <div class="save-voice-row" style="margin-top: 10px; display: flex; gap: 6px;">
+                <input type="text" id="saveVoiceInput" placeholder="Đặt tên giọng (vd: Giọng bạn Sơn)" style="flex: 1; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 12px;">
+                <button type="button" id="saveVoiceBtn" class="mini-btn" style="padding: 6px 10px; font-size: 12px; font-weight: 650; white-space: nowrap; background: var(--forest); color: white; border: none; border-radius: 8px; cursor: pointer;">💾 Lưu vĩnh viễn</button>
+              </div>
             </div>
             <div class="clone-transcript" id="cloneTranscriptWrap" hidden>
               <label for="cloneTranscript">Nội dung chính xác trong audio mẫu</label>
@@ -571,16 +576,16 @@
         elements.load.dataset.action = 'unload';
       } else {
         const running = modelCatalog.find((model) => model.id === loadedModelId);
-        elements.modelTitle.textContent = running ? 'Bạn đã chọn một model khác' : 'Chọn model để bắt đầu';
+        elements.modelTitle.textContent = running ? `Đang chọn: ${selected.name}` : 'Chọn model để bắt đầu';
         const availability = selected.available ? selected.description : `Cần cài backend · ${selected.install_hint}`;
-        elements.modelDescription.textContent = running ? `${selected.name} chưa được tải · hiện đang chạy ${running.name}` : `${selected.name} · ${availability}`;
+        elements.modelDescription.textContent = running ? `${selected.name} chưa nạp vào RAM · hiện đang chạy ${running.name}` : `${selected.name} · ${availability}`;
         elements.statusChip.className = 'status-chip';
-        chipText.textContent = running ? 'Chưa tải lựa chọn' : 'Chưa khởi động';
-        buttonText.textContent = running ? 'Tải model này' : 'Tải & khởi động';
+        chipText.textContent = running ? 'Chưa nạp' : 'Chưa khởi động';
+        buttonText.textContent = running ? 'Khởi động model này' : 'Khởi động model';
         elements.load.dataset.action = 'load';
       }
       elements.load.disabled = false;
-      elements.generate.disabled = modelState !== 'ready' || loadedModelId !== selected.id;
+      elements.generate.disabled = false;
       renderModelCapabilities();
     }
 
@@ -621,7 +626,7 @@
         elements.modelTitle.textContent = 'Chọn model để bắt đầu';
         elements.modelDescription.textContent = `${status.model} · ${status.description}`;
         chipText.textContent = 'Chưa khởi động';
-        buttonText.textContent = 'Tải & khởi động';
+        buttonText.textContent = 'Khởi động model';
         elements.load.dataset.action = 'load';
       }
     }
@@ -703,7 +708,35 @@
       elements.voiceName.textContent = selected.name;
       elements.voiceDescription.textContent = selected.description || [selected.gender, selected.region].filter(Boolean).join(' · ');
       elements.voiceAvatar.textContent = selected.name.trim().charAt(0).toUpperCase();
+
+      const deleteBtn = document.getElementById('deleteCustomVoiceBtn');
+      if (deleteBtn) {
+        deleteBtn.hidden = !(selected.id && selected.id.startsWith('custom:'));
+      }
     }
+
+    document.getElementById('deleteCustomVoiceBtn')?.addEventListener('click', async () => {
+      const selectedId = elements.voice.value;
+      const selected = voices.find((voice) => voice.id === selectedId);
+      if (!selectedId || !selectedId.startsWith('custom:')) return;
+
+      if (!confirm(`Bạn có chắc chắn muốn xóa giọng "${selected?.name || 'này'}" khỏi danh sách không?`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/voices/custom?voice_id=${encodeURIComponent(selectedId)}`, {
+          method: 'DELETE',
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+
+        notify(`Đã xóa giọng "${selected?.name}"!`);
+        await loadVoices();
+      } catch (error) {
+        notify(`Lỗi xóa giọng: ${error.message}`, true);
+      }
+    });
 
     async function loadVoices(modelId = selectedModel()?.id || 'v3-turbo-int8') {
       const requestId = ++voiceRequestId;
@@ -718,13 +751,20 @@
           const option = document.createElement('option'); option.value = voice.id; option.textContent = voice.name; elements.voice.appendChild(option);
         });
         elements.voice.disabled = voices.length === 0;
+        const savedVoice = localStorage.getItem('vieneu-selected-voice');
+        if (savedVoice && voices.some((v) => v.id === savedVoice)) {
+          elements.voice.value = savedVoice;
+        }
         updateVoicePreview();
       } catch (error) {
         elements.voice.innerHTML = '<option>Không tải được danh sách</option>';
         notify(`Lỗi tải danh sách giọng: ${error.message}`, true);
       }
     }
-    elements.voice.addEventListener('change', updateVoicePreview);
+    elements.voice.addEventListener('change', () => {
+      localStorage.setItem('vieneu-selected-voice', elements.voice.value);
+      updateVoicePreview();
+    });
 
     function setVoiceMode(mode) {
       if (recordingStream && mode !== 'clone') {
@@ -732,6 +772,7 @@
         return;
       }
       voiceMode = mode;
+      localStorage.setItem('vieneu-voice-mode', mode);
       elements.voiceTabs.forEach((tab) => {
         const active = tab.dataset.voiceMode === mode;
         tab.classList.toggle('active', active);
@@ -764,8 +805,8 @@
 
     async function setReferenceFile(file, knownDuration = null) {
       if (!file) return;
-      const supported = /\.(wav|flac|ogg|mp3)$/i.test(file.name) || ['audio/wav', 'audio/x-wav', 'audio/flac', 'audio/ogg', 'audio/mpeg', 'audio/mp3'].includes(file.type);
-      if (!supported) { notify('Hãy chọn file WAV, FLAC, OGG hoặc MP3.', true); return; }
+      const supported = /\.(wav|flac|ogg|mp3|m4a|aac|mp4)$/i.test(file.name) || ['audio/wav', 'audio/x-wav', 'audio/flac', 'audio/ogg', 'audio/mpeg', 'audio/mp3', 'audio/m4a', 'audio/x-m4a', 'audio/mp4', 'audio/aac'].includes(file.type);
+      if (!supported) { notify('Hãy chọn file WAV, FLAC, OGG, MP3 hoặc M4A.', true); return; }
       if (file.size > 25 * 1024 * 1024) { notify('Audio mẫu không được vượt quá 25 MB.', true); return; }
 
       const nextUrl = URL.createObjectURL(file);
@@ -798,6 +839,42 @@
     elements.dropZone.addEventListener('drop', (event) => setReferenceFile(event.dataTransfer.files[0]));
     elements.dropZone.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); elements.referenceInput.click(); }
+    });
+
+    document.getElementById('saveVoiceBtn')?.addEventListener('click', async () => {
+      const voiceNameInput = document.getElementById('saveVoiceInput');
+      const voiceName = (voiceNameInput?.value || '').trim();
+      if (!voiceName) {
+        notify('Vui lòng nhập tên cho giọng mẫu (ví dụ: Giọng bạn Sơn).', true);
+        return;
+      }
+      if (!referenceFile) {
+        notify('Chưa có audio mẫu để lưu.', true);
+        return;
+      }
+      try {
+        const formData = new FormData();
+        formData.append('voice_name', voiceName);
+        formData.append('reference_audio', referenceFile);
+
+        const response = await fetch('/api/voices/save', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`);
+
+        notify(`Đã lưu "${data.voice.name}" vào danh sách Giọng có sẵn!`);
+        voiceNameInput.value = '';
+        await loadVoices();
+        setVoiceMode('preset');
+        if (elements.voice) {
+          elements.voice.value = data.voice.id;
+          updateVoicePreview();
+        }
+      } catch (error) {
+        notify(`Lỗi lưu giọng mẫu: ${error.message}`, true);
+      }
     });
 
     function mergeRecordingChunks(chunks) {
@@ -995,6 +1072,13 @@
       recordingStream?.getTracks().forEach((track) => track.stop());
     });
 
+    const savedVoiceMode = localStorage.getItem('vieneu-voice-mode');
+    if (savedVoiceMode) {
+      setVoiceMode(savedVoiceMode);
+    }
+    if (elements.referenceInput.files && elements.referenceInput.files[0]) {
+      setReferenceFile(elements.referenceInput.files[0]);
+    }
     loadModels().then(() => loadVoices()).then(refreshStatus);
   </script>
 </body>

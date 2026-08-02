@@ -80,6 +80,7 @@ dependencies = [
     "fastapi>=0.115",       # lazy-loading VieNeu Studio backend
     "uvicorn>=0.30",        # local VieNeu Studio server
     "python-multipart>=0.0.20", # voice-cloning audio uploads
+    "imageio-ffmpeg>=0.5.0",    # universal audio decoding (m4a, aac, mp3, ogg, etc.)
     "perth>=0.2.0",         # optional audio watermark (skipped gracefully if absent)
 ]
 

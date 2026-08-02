@@ -30,13 +30,13 @@ from pydantic import BaseModel, Field
 MAX_REFERENCE_BYTES = 25 * 1024 * 1024
 MIN_REFERENCE_SECONDS = 1.0
 MAX_REFERENCE_SECONDS = 15.0
-DEFAULT_MODEL_ID = "v3-turbo-int8"
+DEFAULT_MODEL_ID = "v3-turbo-fp32"
 MODEL_CONFIGS: dict[str, dict[str, Any]] = {
-    "v3-turbo-int8": {
-        "id": "v3-turbo-int8",
-        "name": "VieNeu-TTS v3 Turbo INT8",
-        "variant": "INT8 · CPU/ONNX",
-        "description": "Nhẹ nhất, nhanh trên CPU và phù hợp cho hầu hết máy.",
+    "v3-turbo-fp32": {
+        "id": "v3-turbo-fp32",
+        "name": "VieNeu-TTS v3 Turbo FP32",
+        "variant": "FP32 · CPU/ONNX",
+        "description": "Chất lượng tối đa, âm thanh chân thực và tự nhiên nhất.",
         "recommended": True,
         "family": "v3 Turbo",
         "device": "CPU",
@@ -45,13 +45,13 @@ MODEL_CONFIGS: dict[str, dict[str, Any]] = {
         "supports_cloning": True,
         "required_modules": [],
         "install_hint": "uv sync --system-certs",
-        "load_kwargs": {"mode": "v3turbo", "backend": "onnx", "precision": "int8"},
+        "load_kwargs": {"mode": "v3turbo", "backend": "onnx", "precision": "fp32"},
     },
-    "v3-turbo-fp32": {
-        "id": "v3-turbo-fp32",
-        "name": "VieNeu-TTS v3 Turbo FP32",
-        "variant": "FP32 · CPU/ONNX",
-        "description": "Chất lượng tối đa, dùng nhiều bộ nhớ và xử lý chậm hơn INT8.",
+    "v3-turbo-int8": {
+        "id": "v3-turbo-int8",
+        "name": "VieNeu-TTS v3 Turbo INT8",
+        "variant": "INT8 · CPU/ONNX",
+        "description": "Nhẹ nhất, nhanh trên CPU và phù hợp cho hầu hết máy.",
         "recommended": False,
         "family": "v3 Turbo",
         "device": "CPU",
@@ -60,7 +60,7 @@ MODEL_CONFIGS: dict[str, dict[str, Any]] = {
         "supports_cloning": True,
         "required_modules": [],
         "install_hint": "uv sync --system-certs",
-        "load_kwargs": {"mode": "v3turbo", "backend": "onnx", "precision": "fp32"},
+        "load_kwargs": {"mode": "v3turbo", "backend": "onnx", "precision": "int8"},
     },
     "v3-turbo-gpu": {
         "id": "v3-turbo-gpu",
@@ -156,6 +156,39 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 CLIENT_HTML_PATH = ROOT_DIR / "client" / "client.html"
 V3_VOICES_PATH = ROOT_DIR / "src" / "vieneu" / "assets" / "voices_v3_turbo.json"
 LEGACY_VOICES_PATH = ROOT_DIR / "src" / "vieneu" / "assets" / "voices.json"
+SAVED_VOICES_DIR = ROOT_DIR / "saved_voices"
+SAVED_VOICES_JSON = SAVED_VOICES_DIR / "custom_voices.json"
+
+
+def _get_custom_voices() -> list[dict[str, Any]]:
+    if not SAVED_VOICES_JSON.exists():
+        return []
+    try:
+        return json.loads(SAVED_VOICES_JSON.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+
+def _save_custom_voice_meta(voice_data: dict[str, Any]) -> None:
+    SAVED_VOICES_DIR.mkdir(parents=True, exist_ok=True)
+    current = _get_custom_voices()
+    current = [v for v in current if v.get("id") != voice_data.get("id")]
+    current.insert(0, voice_data)
+    SAVED_VOICES_JSON.write_text(json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _delete_custom_voice_meta(voice_id: str) -> bool:
+    current = _get_custom_voices()
+    target = next((v for v in current if v.get("id") == voice_id), None)
+    if not target:
+        return False
+    saved_path_str = target.get("saved_path")
+    if saved_path_str:
+        Path(saved_path_str).unlink(missing_ok=True)
+    updated = [v for v in current if v.get("id") != voice_id]
+    SAVED_VOICES_JSON.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
+    return True
+
 
 app = FastAPI(
     title="VieNeu Studio",
@@ -298,10 +331,11 @@ def _read_local_voices(model_id: str = DEFAULT_MODEL_ID) -> list[dict[str, str]]
         }]
 
     voices_path = V3_VOICES_PATH if config["family"] == "v3 Turbo" else LEGACY_VOICES_PATH
+    preset_list = []
     try:
         data = json.loads(voices_path.read_text(encoding="utf-8"))
         presets = data.get("presets", {})
-        return [
+        preset_list = [
             {
                 "id": name,
                 "name": name,
@@ -313,15 +347,31 @@ def _read_local_voices(model_id: str = DEFAULT_MODEL_ID) -> list[dict[str, str]]
             for name, details in presets.items()
         ]
     except (OSError, ValueError, TypeError):
-        return []
+        preset_list = []
+
+    custom_list = [
+        {
+            "id": item["id"],
+            "name": item["name"],
+            "description": item.get("description", "Giọng clone cá nhân"),
+            "gender": "Cá nhân",
+            "region": "Custom",
+            "style": "Clone",
+        }
+        for item in _get_custom_voices()
+    ]
+    return custom_list + preset_list
 
 
 def _ready_model() -> Any:
+    global _model, _model_state, _model_error, _model_loaded_at
     with _model_lock:
+        if _model_state != "ready" or _model is None:
+            _load_model(_selected_model_id)
         if _model_state != "ready" or _model is None:
             raise HTTPException(
                 status_code=409,
-                detail="Model chưa sẵn sàng. Hãy bấm ‘Khởi động model’ trước.",
+                detail=f"Khởi động model thất bại: {_model_error or 'Không rõ nguyên nhân'}",
             )
         return _model
 
@@ -384,7 +434,7 @@ async def model_unload() -> dict[str, Any]:
 @app.get("/api/voices")
 async def api_voices(model_id: str = DEFAULT_MODEL_ID) -> list[dict[str, str]]:
     if model_id not in MODEL_CONFIGS:
-        raise HTTPException(status_code=422, detail="Model không được hỗ trợ.")
+        model_id = DEFAULT_MODEL_ID
     return _read_local_voices(model_id)
 
 
@@ -411,13 +461,36 @@ def _validate_reference(path: Path) -> float:
         import soundfile as sf
 
         info = sf.info(str(path))
-    except Exception as exc:  # noqa: BLE001 - libsndfile reports format-specific errors
-        raise HTTPException(
-            status_code=422,
-            detail="Không đọc được audio mẫu. Hãy dùng WAV, FLAC, OGG hoặc MP3 hợp lệ.",
-        ) from exc
+        duration = float(info.duration)
+    except Exception:
+        try:
+            import re
+            import subprocess
+            import imageio_ffmpeg
 
-    duration = float(info.duration)
+            ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+            proc = subprocess.run(
+                [ffmpeg_exe, "-i", str(path), "-hide_banner"],
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                text=True,
+                errors="replace",
+            )
+            match = re.search(r"Duration:\s*(\d+):(\d+):(\d+(?:[\.,]\d+)?)", proc.stderr)
+            if match:
+                h, m, s = match.groups()
+                s = s.replace(",", ".")
+                duration = float(h) * 3600 + float(m) * 60 + float(s)
+            else:
+                print(f"[VieNeu] Cannot parse audio duration. FFmpeg output:\n{proc.stderr}")
+                raise ValueError("Could not parse audio duration")
+        except Exception as exc:  # noqa: BLE001
+            print(f"[VieNeu] Reference validation error: {exc}")
+            raise HTTPException(
+                status_code=422,
+                detail=f"Không đọc được audio mẫu ({exc}). Hãy dùng WAV, FLAC, OGG, MP3 hoặc M4A hợp lệ.",
+            ) from exc
+
     if duration < MIN_REFERENCE_SECONDS:
         raise HTTPException(status_code=422, detail="Audio mẫu cần dài ít nhất 1 giây.")
     if duration > MAX_REFERENCE_SECONDS:
@@ -434,14 +507,18 @@ async def _store_reference(upload: UploadFile) -> tuple[Path, float]:
         "audio/ogg": ".ogg",
         "audio/mpeg": ".mp3",
         "audio/mp3": ".mp3",
+        "audio/m4a": ".m4a",
+        "audio/x-m4a": ".m4a",
+        "audio/mp4": ".m4a",
+        "audio/aac": ".m4a",
     }
     original_suffix = Path(upload.filename or "").suffix.lower()
-    allowed_suffixes = {".wav", ".flac", ".ogg", ".mp3"}
+    allowed_suffixes = {".wav", ".flac", ".ogg", ".mp3", ".m4a", ".aac", ".mp4"}
     suffix = suffix_by_type.get(upload.content_type or "")
     if suffix is None and original_suffix in allowed_suffixes:
         suffix = original_suffix
     if suffix is None:
-        raise HTTPException(status_code=415, detail="Định dạng hỗ trợ: WAV, FLAC, OGG hoặc MP3.")
+        raise HTTPException(status_code=415, detail="Định dạng hỗ trợ: WAV, FLAC, OGG, MP3 hoặc M4A.")
 
     temp_path: Path | None = None
     total = 0
@@ -463,6 +540,42 @@ async def _store_reference(upload: UploadFile) -> tuple[Path, float]:
         await upload.close()
 
 
+@app.post("/api/voices/save")
+async def save_voice(
+    voice_name: str = Form(min_length=1, max_length=100),
+    reference_audio: UploadFile = File(...),
+) -> dict[str, Any]:
+    """Save a reference audio file permanently as a custom voice preset."""
+    temp_path, duration = await _store_reference(reference_audio)
+    try:
+        SAVED_VOICES_DIR.mkdir(parents=True, exist_ok=True)
+        safe_filename = f"voice_{int(time.time())}_{temp_path.name}"
+        saved_path = SAVED_VOICES_DIR / safe_filename
+        import shutil
+
+        shutil.copy(temp_path, saved_path)
+        voice_id = f"custom:{saved_path.name}"
+        meta = {
+            "id": voice_id,
+            "name": f"⭐ {voice_name.strip()}",
+            "description": f"Giọng clone cá nhân ({duration:.1f}s)",
+            "saved_path": str(saved_path),
+        }
+        _save_custom_voice_meta(meta)
+        return {"status": "success", "voice": meta}
+    finally:
+        temp_path.unlink(missing_ok=True)
+
+
+@app.delete("/api/voices/custom")
+async def delete_custom_voice(voice_id: str = Query(...)) -> dict[str, Any]:
+    """Delete a saved custom voice preset and its audio file."""
+    success = _delete_custom_voice_meta(voice_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Không tìm thấy giọng cần xóa.")
+    return {"status": "success", "deleted_id": voice_id}
+
+
 def _audio_stream(
     text: str,
     voice_id: Optional[str] = None,
@@ -472,6 +585,18 @@ def _audio_stream(
     engine = _ready_model()
     config = MODEL_CONFIGS[_selected_model_id]
     sample_rate = int(getattr(engine, "sample_rate", config["sample_rate"]))
+
+    # Resolve custom saved voice if selected in voice_id dropdown
+    if reference_path is None and voice_id and voice_id.startswith("custom:"):
+        customs = _get_custom_voices()
+        matched = next((c for c in customs if c.get("id") == voice_id), None)
+        if matched and Path(matched.get("saved_path", "")).exists():
+            reference_path = Path(matched["saved_path"])
+        else:
+            voice_filename = voice_id.replace("custom:", "")
+            candidate = SAVED_VOICES_DIR / voice_filename
+            if candidate.exists():
+                reference_path = candidate
 
     def generate():
         try:
@@ -501,8 +626,9 @@ def _audio_stream(
                 else:
                     raise ValueError(f"{config['name']} không hỗ trợ clone giọng.")
             elif config["family"] == "v3 Turbo":
-                infer_kwargs = {"voice": voice_id or None}
-            elif voice_id:
+                clean_voice = voice_id if voice_id and not voice_id.startswith("custom:") else None
+                infer_kwargs = {"voice": clean_voice}
+            elif voice_id and not voice_id.startswith("custom:"):
                 infer_kwargs = {"voice": engine.get_preset_voice(voice_id)}
             else:
                 infer_kwargs = {}

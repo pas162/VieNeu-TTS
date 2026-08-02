@@ -19,3 +19,7 @@ finetune/output/
 
 # Merged Models
 merged_models_cache/
+
+# Custom Saved Voices
+saved_voices/*
+!saved_voices/.gitkeep

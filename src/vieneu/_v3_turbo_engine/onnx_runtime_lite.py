@@ -565,8 +565,30 @@ class OnnxV3LiteEngine:
     # ── audio I/O (soundfile, torch-free) ──────────────────────────────────────
     def _load_mono(self, ref_audio: Union[str, np.ndarray], sr: Optional[int]) -> Tuple[np.ndarray, int]:
         if isinstance(ref_audio, (str, bytes)) or hasattr(ref_audio, "__fspath__"):
-            import soundfile as sf
-            wav, sr = sf.read(str(ref_audio), dtype="float32", always_2d=True)  # (n, ch)
+            try:
+                import soundfile as sf
+                wav, sr = sf.read(str(ref_audio), dtype="float32", always_2d=True)  # (n, ch)
+            except Exception:
+                try:
+                    import torchaudio
+                    tensor, sr = torchaudio.load(str(ref_audio))
+                    wav = tensor.numpy()
+                    if wav.ndim == 2:
+                        wav = wav.T
+                    elif wav.ndim == 1:
+                        wav = wav[:, None]
+                except Exception:
+                    import subprocess
+                    import imageio_ffmpeg
+                    ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+                    cmd = [
+                        ffmpeg_exe, "-i", str(ref_audio),
+                        "-f", "s16le", "-ac", "1", "-ar", "16000",
+                        "-y", "-"
+                    ]
+                    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+                    wav = (np.frombuffer(proc.stdout, dtype=np.int16).astype(np.float32) / 32768.0)[:, None]
+                    sr = 16000
             wav = wav.mean(axis=1)                                  # → mono (n,)
         else:
             wav = np.asarray(ref_audio, dtype=np.float32)
